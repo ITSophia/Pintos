@@ -14,7 +14,7 @@ mov byte [es:0x01], 0x07
 mov byte [es:0x02], 'a'
 mov byte [es:0x03], 0x07
 mov byte [es:0x04], 'b'
-mov byte [es:0x05],0x07
+mov byte [es:0x05], 0x07
 mov byte [es:0x06], 'e'
 mov byte [es:0x07], 0x07
 mov byte [es:0x08], 'l'
@@ -61,7 +61,7 @@ mov ds, cx
 ; 首先求个位上的数字。
 ; 显然在这里你需要深入了解一下div指令
 mov dx, 0
-div bx 
+div bx
 mov [0x7c00 + number + 0x00], dl ; 保存个位上的数字
 ; 求十位上的数字
 ; 这里采用“异或”的方式将dx清零，
@@ -84,7 +84,7 @@ mov [0x7c00 + number + 0x04], dl ; 保存万位上的数字
 
 ; 接下来用十进制显示标号的偏移地址，
 ; 首先处理万位上的数
-mov al, [0x7c00 + number + 0x04] 
+mov al, [0x7c00 + number + 0x04]
 add al, 0x30             ; 转换为ASCII对应的字符
 mov [es:0x1a], al
 mov byte [es:0x1b], 0x04 ; 注意一下这里byte的用处
@@ -114,9 +114,17 @@ mov byte [es:0x25], 0x07
 
 ; 声明标号number，并进行初始化。
 ; 其实我觉得这里有个问题：
-;     为什么要用5个byte来进行初始化？    
+;     为什么要用5个byte来进行初始化？
+; 我的理解是：
+;     根据对源码的观察，
+;     实际上number在这里仅仅是起到做汇编地址的作用，
+;     而与它被初始化的内容无关。
+;     也就是说，想初始化成什么样子，
+;     就初始化成什么样子。
+;     我修改了初始化的值再运行，
+;     事实证明确实和初始化的没有关系。
 number:
-    db 0, 0, 0, 0, 0
+    db 1, 1, 1, 1, 1
 
 ; 无限循环
 infi:
