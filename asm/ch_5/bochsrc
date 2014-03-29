@@ -4,7 +4,7 @@ romimage: file=/usr/share/bochs/BIOS-bochs-latest
 
 vgaromimage: file=/usr/share/bochs/VGABIOS-elpin-2.40
 
-floppya: 1_44=YOUR PATH/mbr.img, status=inserted
+floppya: 1_44=YOUR_PATH/mbr.img, status=inserted
 
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 
