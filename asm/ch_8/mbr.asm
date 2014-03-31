@@ -47,96 +47,112 @@ SECTION mbr align = 16 vstart = 0x7c00
     ; 十分清楚地介绍了过程与过程调用
     call read_hard_disk_0
 
-    mov dx, [2]
+    ; @1一直到realloc我就不多介绍了，
+    ; 仅仅引用原书中给出的注释，
+    ; 如果有兴趣的话可以自己对照原书自己理解一下。
+    ; 当然，
+    ; 如果将来我觉得有必要的话，
+    ; 还是会回头过来好好看一下的。
+    ; 以下判断整个用户程序有多大
+    mov dx, [2] ; 曾经把dx写成了ds，花了20分钟排错
     mov ax, [0]
-    mov bx, 512
+    mov bx, 512 ; 每个扇区512个字节
     div bx
     cmp dx, 0
-    jnz @1
-    dec ax
+    jnz @1      ; 未除尽，因此结果比实际扇区少1
+    dec ax      ; 已经读了一个扇区，扇区总数减1
+
     @1:
-        cmp ax,0
+        cmp ax, 0   ; 考虑实际长度小于等于512个字节的情况
         jz direct
 
-        push ds
+        ; 读取剩余的扇区
+        push ds    ; 以下要用到并改变ds寄存器
+        mov cx, ax ; 循环次数（剩余扇区）
 
-        mov cx,ax
     @2:
-        mov ax,ds
-        add ax,0x20
-        mov ds,ax
+        mov ax, ds
+        add ax, 0x20 ; 得到下一个以512字节为边界的段地址
+        mov ds, ax
 
-        xor bx,bx
-        inc si
+        xor bx, bx ; 每次读时，偏移地址始终为0x0000
+        inc si     ; 下一个逻辑扇区
         call read_hard_disk_0
-        loop @2
+        loop @2    ; 循环读，直到读完整个功能程序
 
-        pop ds
+        pop ds ; 恢复数据段基址到用户程序头部段
 
+    ; 计算入口点代码段
     direct:
-        mov dx,[0x08]
-        mov ax,[0x06]
+        mov dx, [0x08]
+        mov ax, [0x06]
         call calc_segment_base
-        mov [0x06],ax
+        mov [0x06], ax ; 回填修正后的入口点代码段地址
 
-        mov cx,[0x0a]
-        mov bx,0x0c
+        ; 开始处理段重定位表
+        mov cx, [0x0a] ; 需要重定位的项目数量
+        mov bx, 0x0c   ; 重定位表首地址
 
     realloc:
-        mov dx,[bx+0x02]
-        mov ax,[bx]
+        mov dx, [bx+0x02] ; 32位地址的高16位
+        mov ax, [bx]
         call calc_segment_base
-        mov [bx],ax
-        add bx,4
+        mov [bx], ax      ; 回填段的基址
+        add bx, 4         ; 下一个重定位项（每项占4个字节）
         loop realloc
 
-        jmp far [0x04]
+        jmp far [0x04]    ; 跳转到用户程序
 
 ;-------------------------------------------------------------------------------
+
+; 从硬盘读取一个逻辑扇区，
+; 输入：di:is = 起始逻辑扇区号
+;       ds:bx = 目标缓冲区地址
 read_hard_disk_0:
+    ; 进行压栈，保存数据
     push ax
     push bx
     push cx
     push dx
 
-    mov dx,0x1f2
-    mov al,1
-    out dx,al
+    mov dx, 0x1f2
+    mov al, 1
+    out dx, al ; 读取的扇区数
 
-    inc dx
-    mov ax,si
-    out dx,al
+    inc dx     ; 使得dx = 0x1f3
+    mov ax, si
+    out dx, al ; lba地址7 ~ 0
 
-    inc dx
-    mov al,ah
-    out dx,al
+    inc dx     ; 使得dx = 0x1f4
+    mov al, ah
+    out dx, al ; lba地址15 ~ 8
 
-    inc dx
-    mov ax,di
-    out dx,al
+    inc dx     ; 使得dx = 0x1f5
+    mov ax, di
+    out dx, al ; lba地址23 ~ 16
 
-    inc dx
-    mov al,0xe0
-    or al,ah
-    out dx,al
+    inc dx       ; 使得dx = 0x1f6
+    mov al, 0xe0 ; lba28模式，主盘
+    or al, ah    ; lba地址27~24
+    out dx, al
 
-    inc dx
-    mov al,0x20
-    out dx,al
+    inc dx       ; 使得dx = 0x1f7
+    mov al, 0x20 ; 读命令
+    out dx, al
 
     .waits:
-        in al,dx
-        and al,0x88
-        cmp al,0x08
-        jnz .waits
+        in al, dx
+        and al, 0x88
+        cmp al, 0x08
+        jnz .waits ; 不忙，且硬盘已经准备好数据传输
 
-        mov cx,256
-        mov dx,0x1f0
+        mov cx, 256 ; 总共要读取的字数
+        mov dx, 0x1f0
     
     .readw:
-        in ax,dx
-        mov [bx],ax
-        add bx,2
+        in ax, dx
+        mov [bx], ax
+        add bx, 2
         loop .readw
 
         pop dx
@@ -147,22 +163,28 @@ read_hard_disk_0:
         ret
 
 ;-------------------------------------------------------------------------------
+
+; 计算16位段地址，
+; 输入：dx:ax = 32位物理地址
+; 返回：ax = 16位段地址
 calc_segment_base:
     push dx
 
-    add ax,[cs:phy_base]
-    adc dx,[cs:phy_base+0x02]
-    shr ax,4
-    ror dx,4
-    and dx,0xf000
-    or ax,dx
+    add ax, [cs:phy_base]
+    adc dx, [cs:phy_base+0x02]
+    shr ax, 4
+    ror dx, 4
+    and dx, 0xf000
+    or ax, dx
 
     pop dx
 
     ret
 
 ;-------------------------------------------------------------------------------
+
+; 用户程序被加载的物理地址
 phy_base dd 0x10000
 
 times 510-($-$$) db 0
-                 db 0x55,0xaa
+                 db 0x55, 0xaa
