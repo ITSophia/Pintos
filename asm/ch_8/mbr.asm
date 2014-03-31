@@ -14,8 +14,16 @@ app_lba_start equ 100
 ; 也就是说，必须是16的倍数，或者能被16整除;
 ; vstart是用来使段内标号的汇编地址从该段的开头开始计算的，
 ; 如果没有用vstart说明，
-; 则这个标号的汇编地址是从整个程序的开头开始计算的
-SECTION mbr align = 16 vstart = 0x7c00
+; 则这个标号的汇编地址是从整个程序的开头开始计算的。
+; 另外需要注意的是，
+; 在SECTION或者SEGMENT定义段的时候，
+; 诸如align和vstart这样的选项，
+; 其等号两边不能有空格，
+; 其他地方有空格没关系，
+; 但是这里千万不能有，
+; 虽然汇编的时候汇编器只显示warning，
+; 但实际上是没办法显示出结果的。
+SECTION mbr align=16 vstart=0x7c00
     ; 设置堆栈
     mov ax, 0
     mov ss, ax ; ss是stack segment，栈段寄存器

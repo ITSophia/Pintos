@@ -12,7 +12,7 @@
 ; 我还是会回头过来重新审视的
 ;===============================================================================
 
-SECTION header vstart = 0          ; 定义用户程序头部段
+SECTION header vstart=0          ; 定义用户程序头部段
     program_length  dd program_end ; 程序总长度[0x00]
 
     ; 用户程序入口点
@@ -31,7 +31,7 @@ SECTION header vstart = 0          ; 定义用户程序头部段
 
 ;===============================================================================
 
-SECTION code_1 align = 16 vstart = 0 ; 定义代码段1（16字节对齐）
+SECTION code_1 align=16 vstart=0 ; 定义代码段1（16字节对齐）
 
 ; 显示串（0结尾）
 ; 输入：ds:bx = 串地址
@@ -175,7 +175,7 @@ continue:
 
 ;===============================================================================
 
-SECTION code_2 align = 16 vstart = 0 ; 定义代码段2（16字节对齐）
+SECTION code_2 align=16 vstart=0 ; 定义代码段2（16字节对齐）
 
 begin:
     push word [es:code_1_segment]
@@ -186,7 +186,7 @@ begin:
 
 ;===============================================================================
 
-SECTION data_1 align = 16 vstart = 0
+SECTION data_1 align=16 vstart=0
 msg0 db '  This is NASM - the famous Netwide Assembler. '
      db 'Back at SourceForge and in intensive development! '
      db 'Get the current versions from http://www.nasm.us/.'
@@ -207,19 +207,19 @@ msg0 db '  This is NASM - the famous Netwide Assembler. '
 
 ;===============================================================================
 
-SECTION data_2 align = 16 vstart = 0
+SECTION data_2 align=16 vstart=0
 msg1 db '  The above contents is written by LeeChung. '
      db '2011-05-06'
      db 0
 
 ;===============================================================================
 
-SECTION stack align = 16 vstart = 0
+SECTION stack align=16 vstart=0
     resb 256
 
 stack_end:
 
 ;===============================================================================
 
-SECTION trail align = 16
+SECTION trail align=16
 program_end:
