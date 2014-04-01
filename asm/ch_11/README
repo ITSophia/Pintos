@@ -1,0 +1,6 @@
+那么你如何运行这段代码呢？
+    1. nasm mbr.asm -o mbr.bin
+    2. dd if=mbr.bin of=mbr.img bs=512 count=1 conv=notrunc
+    3. 在bochsrc中把YOUR_PATH替换为你的mbr.img所在的文件夹路径
+    这样你就可以直接在终端执行bochs命令直接从mbr.img启动了。
+    之后你会看到如mbr.png所示的情况。
