@@ -1,16 +1,23 @@
+; 对应原书代码：co9_2.asm
+; 文件说明：用于演示BIOS中断的用户程序
+; 创建日期：2014-04-01
+
+; 用户程序，如前，不再赘述
 
 ; ===============================================================================
 
-SECTION header vstart=0 
+SECTION header vstart=0 ; 定义用户程序头部段
 
-    program_length  dd program_end   
+    program_length  dd program_end ; 程序总长度[0x00]
     
-    code_entry      dw start               
-                    dd section.code.start   
+    ; 用户程序入口
+    code_entry      dw start              ; 偏移地址[0x04]
+                    dd section.code.start ; 段地址[0x06]
     
-    realloc_tbl_len dw (header_end-realloc_begin) / 4
+    realloc_tbl_len dw (header_end-realloc_begin) / 4 ; 段重定位表项个数[0x0a]
     
     realloc_begin:
+    ; 段重定位表
     code_segment    dd section.code.start   ; [0x0c]
     data_segment    dd section.data.start   ; [0x14]
     stack_segment   dd section.stack.start  ; [0x1c]
@@ -19,7 +26,7 @@ header_end:
     
 ;===============================================================================
 
-SECTION code align=16 vstart=0           
+SECTION code align=16 vstart=0 ; 定义代码段（16字节对齐）
 
 start:
     mov ax, [stack_segment]
