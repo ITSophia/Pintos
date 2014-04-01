@@ -1,0 +1,28 @@
+如何运行user.asm？
+    1. nasm mbr.asm -f bin -o mbr.bin
+    2. nasm user.asm -f bin -o user.bin
+       这时候会显示user.asm:334: warning: uninitialized space declared in stack section: zeroing，
+       在这里你可以看看原书第147页的解释，我在这里就不做说明了
+    3. 用Virtual Box创建一个固定大小的VHD文件
+    4. dd if=mbr.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=1 conv=notrunc
+       其中YOUR_VHD_PATH是你的VHD文件路径，YOUR_VHD_FILE_NAME是你的VDH文件名称
+    5. dd if=user.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=2 conv=notrunc seek=100
+       其中YOUR_VHD_PATH是你的VHD文件路径，YOUR_VHD_FILE_NAME是你的VDH文件名称
+    这样你就可以直接在Virtual Box中直接启动了。
+    不要理会那个“没有磁盘”什么的提示，直接取消之，稍等片刻之后，之后你会看到如user.png所示的情况。
+    
+如何运行interrupt.asm？
+    1. nasm mbr.asm -f bin -o mbr.bin
+    2. nasm interrupt.asm -f bin -o interrupt.bin
+       这时候会显示interrupt.asm:73: warning: uninitialized space declared in stack section: zeroing，
+       在这里你可以看看原书第147页的解释，我在这里就不做说明了
+    3. 用Virtual Box创建一个固定大小的VHD文件
+    4. dd if=mbr.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=1 conv=notrunc
+       其中YOUR_VHD_PATH是你的VHD文件路径，YOUR_VHD_FILE_NAME是你的VDH文件名称
+    5. dd if=interrupt.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=2 conv=notrunc seek=100
+       其中YOUR_VHD_PATH是你的VHD文件路径，YOUR_VHD_FILE_NAME是你的VDH文件名称
+    这样你就可以直接在Virtual Box中直接启动了。
+    不要理会那个“没有磁盘”什么的提示，直接取消之，稍等片刻之后，之后你会看到如interrupt.png所示的情况。
+
+    另外，之所以这次不用Bochs呢，是因为Bochs运行这段代码的时候会卡在引导界面，我也不知道为什么，所以我就用Virtual Box啦 ;-)
+    如果你知道怎么用Bochs启动的话，可以和我联系。

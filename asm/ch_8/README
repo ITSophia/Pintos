@@ -6,7 +6,7 @@
     3. 用Virtual Box创建一个固定大小的VHD文件
     4. dd if=mbr.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=1 conv=notrunc
        其中YOUR_VHD_PATH是你的VHD文件路径，YOUR_VHD_FILE_NAME是你的VDH文件名称
-    5. dd if=user.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=3 conv=notrunc seek=100
+    5. dd if=user.bin of=YOUR_VHD_PATH/YOUR_VHD_FILE_NAME.vhd bs=512 count=2 conv=notrunc seek=100
        其中YOUR_VHD_PATH是你的VHD文件路径，YOUR_VHD_FILE_NAME是你的VDH文件名称
     这样你就可以直接在Virtual Box中直接启动了。
     不要理会那个“没有磁盘”什么的提示，直接取消之，稍等片刻之后，之后你会看到如all.png所示的情况。
