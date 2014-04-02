@@ -2,48 +2,81 @@
 ; 文件说明：硬盘主引导扇区代码
 ; 创建日期：2014-04-02
 
+; 设置堆栈指针；
+; 在这里使用eax或者ax其实都没什么影响，
+; 因为我们使用的是NASM汇编器，哈哈
 mov eax, cs
 mov ss, eax
 mov sp, 0x7c00
 
-mov eax, [cs:pgdt + 0x7c00 + 0x02]
+; 计算GDT在实模式下的逻辑段地址；
+; 另外需要注意的是，
+; 在32位处理器上，即使是在实模式下，也可以使用32位寄存器
+mov eax, [cs:pgdt + 0x7c00 + 0x02] ; 这里是GDT的32位线性基地址
 xor edx, edx
 mov ebx, 16
-div ebx
+div ebx                            ; 通过整除16的方式获取其16位下的逻辑地址
 
-mov ds, eax
-mov ebx, edx
+mov ds, eax  ; 令ds指向GDT所在逻辑段段以进行操作
+mov ebx, edx ; 获取段内起始偏移地址
 
+; 创建空描述符，
+; 空描述符的用意是阻止不安全的访问
 mov dword [ebx + 0x00], 0x00000000
 mov dword [ebx + 0x04], 0x00000000
 
-mov dword [ebx + 0x08], 0x0000ffff
-mov dword [ebx + 0x0c], 0x00cf9200
+; 安装数据段描述符，
+; 注意，
+; 这个数据段为4GB大小的线性地址空间
+mov dword [ebx + 0x08], 0x0000ffff ; 基地址为0， 段界限为0xfffff
+mov dword [ebx + 0x0c], 0x00cf9200 ; 粒度为4KB
 
-mov dword [ebx + 0x10], 0x7c0001ff
-mov dword [ebx + 0x14], 0x00409800
+; 安装代码段描述符
+mov dword [ebx + 0x10], 0x7c0001ff ; 基地址为0x00007c00，512字节
+mov dword [ebx + 0x14], 0x00409800 ; 粒度为1个字节
 
-mov dword [ebx + 0x18], 0x7c0001ff
-mov dword [ebx + 0x1c], 0x00409200
+; 创建以上代码的别名描述符；
+; 那么什么是别名呢？
+; 在保护模式下，代码段是不可写入的，
+; 这里是说，
+; 通过该段的描述符来访问这个区域的时候，
+; 处理器不云戏向里面写入数据或者更改数据；
+; 但有的时候我们有又有这方面的需求，
+; 所以如果需要访问呢代码段内的数据，
+; 只能重新为该段安装一个新的描述符，
+; 并将其定义为可读可写的数据段，
+; 这样，我们的需求就可以满足啦；
+; 所以综上所述，
+; 当两个或者两个以上的描述符都描述和指向同一个段的时候，
+; 把另外的描述符称为别名（alias）
+mov dword [ebx + 0x18], 0x7c0001ff ; 基地址为0x00007c00，512字节
+mov dword [ebx + 0x1c], 0x00409200 ; 粒度为1个字节
 
-mov dword [ebx + 0x20], 0x7c00fffe
-mov dword [ebx + 0x24], 0x00cf9600
+; 安装栈段描述符
+mov dword [ebx + 0x20], 0x7c00fffe ; 基地址为0x00007c00
+mov dword [ebx + 0x24], 0x00cf9600 ; 粒度4KB
 
-mov word [cs:pgdt + 0x7c00], 39
+; 初始化描述符表寄存器GDTR
+mov word [cs:pgdt + 0x7c00], 39 ; 设置符表的界限为39
 
+; 加载GDT
 lgdt [cs:pgdt + 0x7c00]
 
+; 打开A20
 in al, 0x92
 or al, 0000_0010B
 out 0x92, al
 
+; 打开A20
 cli
 
+; 设置PE位
 mov eax, cr0
 or eax, 1
 mov cr0, eax
 
-jmp dword 0x0010:flush
+; 进入保护模式
+jmp dword 0x0010:flush ; 16位的描述符选择子：32位偏移
 
 [bits 32]
 
@@ -102,6 +135,7 @@ string db 's0ke4or92xap3fv8giuzjcy5l1m7hd6bnqtw.'
 
 ; -------------------------------------------------------------------------------
 
+; 初始化GDT的线性基地址
 pgdt dw 0
      dd 0x00007e00
 
