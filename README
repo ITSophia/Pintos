@@ -1,1 +1,34 @@
-斯坦福大学CS140 Pintos操作系统课程学习手册 -- http://www.stanford.edu/class/cs140/projects/pintos/pintos.html
+斯坦福大学CS140 Pintos操作系统课程官方网址：
+http://www.stanford.edu/class/cs140/projects/pintos/pintos.html
+
+详细文档可参阅我的个人博客：
+https://mthli.github.io
+
+文件说明：
+    1. Doc -- 用于存放一些Pintos相关的参考资料
+    2. Release -- 存放了各个Project的完成部分
+    3. Test -- 当前正在进行相关代码实现的文件夹
+    4. README -- README文件
+
+进度：
+    Project 1 -- Threads
+      |
+      | -- Alarm Clock（已完成，2014年05月31日）
+      |      |
+      |      | -- 修改timer.h文件：
+      |      |    增加ticks_cmp()函数声明
+      |      |
+      |      | -- 修改timer.c文件：
+      |           修改timer_sleep()函数、timer_interrupt()函数，
+      |           增加ticks_cmp()函数的实现
+      |
+      | -- Priority Scheduling（实现中）
+      |
+      | -- ...
+
+参考：
+    1. https://github.com/rtwilson/Pintos-Project-1
+    2. ...
+
+协议：
+http://www.stanford.edu/class/cs140/projects/pintos/pintos_14.html#SEC172
