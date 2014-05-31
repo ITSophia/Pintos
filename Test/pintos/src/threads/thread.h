@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 
+#include "devices/timer.h"
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -92,6 +94,9 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    /* int64_t ticks 用于设置timer_sleep()的唤醒时间 */
+    int64_t ticks;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

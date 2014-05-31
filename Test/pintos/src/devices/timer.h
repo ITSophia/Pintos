@@ -3,6 +3,10 @@
 
 #include <round.h>
 #include <stdint.h>
+#include <list.h>
+
+#include "threads/thread.h"
+#include "threads/synch.h"
 
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
@@ -25,5 +29,12 @@ void timer_udelay (int64_t microseconds);
 void timer_ndelay (int64_t nanoseconds);
 
 void timer_print_stats (void);
+
+/* 自定义了一个比较函数，用于排序插入 */
+bool ticks_cmp(
+  const struct list_elem *a,
+  const struct list_elem *b,
+  void *aux
+);
 
 #endif /* devices/timer.h */
