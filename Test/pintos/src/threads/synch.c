@@ -386,11 +386,44 @@ lock_try_acquire (struct lock *lock)
 void
 lock_release (struct lock *lock)
 {
+  /* 定义一些需要用到的变量 */
+  struct list_elem *lock_holder_elem;
+  struct thread *lock_holder;
+  struct list_elem *temp;
+
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder = NULL;
-  sema_up (&lock->semaphore);
+  /* 
+   * 注释掉原先的代码
+   * lock->holder = NULL;
+   * sema_up (&lock->semaphore);
+   */
+
+  /* 
+   * 由于之前在lock_acquire()中定义了许多东西，
+   * 所以在这里要一一释放
+   */
+  /* 
+   * 首先获取到持有lock的线程，
+   * 按理来说，
+   * 调用lock_release()函数的当前线程，
+   * 就是当前持有lock的线程，
+   * 有必要的话可以判断一下
+   */
+  lock_holder = thread_current();
+  /* 从acquire_list中删除这个线程 */
+  lock_holder_elem = get_lock_holder_elem(
+          &lock -> acquire_list,
+          &lock_holder,
+          NULL
+  );
+  list_remove(lock_holder_elem);
+  /* 还原线程的优先级 */
+  priority_swap_to_origin(lock_holder);
+  /* 释放锁 */
+  lock -> holder = NULL;
+  sema_up(&lock -> semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false
