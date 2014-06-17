@@ -93,14 +93,6 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    /* 
-     * 在优先级翻转的时候，
-     * 上面的priority变量会随着变化，
-     * 需要一个变量来承载这个线程的原始的优先级，
-     * 方便优先级翻转完成之后恢复成原来的样子
-     */
-    int origin_priority;
-
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
