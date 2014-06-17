@@ -179,6 +179,80 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+
+  /* 初始化承载链表中最高优先级的变量，初值设为-1 */
+  lock -> priority_max = -1;
+  /* 初始化lock中用于管理相关线程的链表 */
+  list_init(lock -> acquire_list);
+}
+
+/*
+ * 定义一个用于比较线程优先级的函数，
+ * 方便插入
+ */
+bool priority_cmp(
+        const struct list_elem *a,
+        const struct list_elem *b,
+        void *aux UNUSED
+) {
+    struct thread *ta = list_entry(a, struct thread, elem);
+    struct thread *tb = list_entry(b, struct thread, elem);
+
+    /* 在这里使用升序 */
+    if ((ta -> priority) > (tb -> priority)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+/* 判断是不是有线程持有lock */
+bool is_thread_hold_lock(const struct lock *lock) {
+    if (lock -> holder == NULL) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+/* 获取持有lock的线程在acquire_list中所处的位置 */
+struct list_elem *get_lock_holder_elem(
+        struct list *acquire_list,
+        struct thread *lock_holder,
+        void *aux
+) {
+    struct list_elem *e;
+    struct thread *t;
+    
+    /* 在acquire_list中遍历查找 */
+    for (
+            e = list_begin(acquire_list); 
+            e != list_end(acquire_list); 
+            e = list_next(e)
+    ) {
+        t = list_entry(e, struct thread, elem);
+        /* 用tid判断线程是否符合要求，因为tid是唯一的 */
+        if (t -> tid == lock_holder -> tid) {
+            break;
+        }
+    }
+
+    return e;
+}
+
+/* 翻转线程的优先级 */
+void priority_swap_to_max(struct list_elem *e, int priority_max) {
+    struct thread *t;
+
+    t = list_entry(e, struct thread, elem);
+    /* 也许这部分应该写入thread_set_priority()函数中 */
+    t -> origin_priority = t -> priority;
+    t -> priority = priority_max;
+}
+
+/* 还原线程的优先级 */
+void priority_swap_to_origin(struct thread *t) {
+    t -> priority = t -> origin_priority;
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -192,12 +266,95 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
+  /* 定义一些需要用到的变量 */
+  struct list_elem *max_priority_elem;
+  struct thread *max_priority_thread;
+  struct list_elem *lock_holder_elem;
+  struct list_elem *temp;
+
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  /*
+   * 注释掉原有的代码
+   * sema_down (&lock->semaphore);
+   * lock->holder = thread_current ();
+   */
+
+  /* 首先确定acquire_list中最高的优先级 */
+  if (lock -> priority_max < thread_current() -> priority) {
+      lock -> priority_max = thread_current() -> priority;
+  }
+
+  /* 
+   * 首先把当前请求的线程按照优先级升序加入到acquire_list中
+   * 
+   * 注意，
+   * 一个线程如果没有获得lock，
+   * 那么它就会被被阻塞，
+   * 而不会一直申请，
+   * 所以理论上acquire_list中应该不会出现重复的元素
+   */
+  list_insert_ordered(
+          &(lock -> acquire_list),
+          &(thread_current() -> elem),
+          (list_less_func *) &priority_cmp,
+          NULL
+  );
+
+  /*
+   * 首先判断是不是有线程持有lock，
+   * 如果没有，
+   * 则直接把lock赋给acquire_list中优先级最高的那个线程；
+   * 如果有，
+   * 则对acquire_list中的线程进行适当的操作
+   *
+   * 注意之前ASSERT已经确定了当前请求的线程并不持有lock
+   */
+  if (is_thread_hold_lock(lock) == false) {
+      /* 取得acquire_list中优先级最高的线程 */
+      max_priority_elem = list_max(
+              &lock -> acquire_list,
+              (list_less_func *) &priority_cmp,
+              NULL
+      );
+      max_priority_thread = list_entry(
+              max_priority_elem,
+              struct thread,
+              elem
+      );
+      sema_down(&lock -> semaphore);
+      /* 将lock赋给这个线程 */
+      lock -> holder = max_priority_thread;
+  } else {
+      /*
+       * 再从acquire_list中挑选出一个合适的线程进行分配，
+       * 总体来说就是，
+       * 在acquire_list中找到持有lock的线程，
+       * 将它和之后的线程的优先级全部提升到priority_max，
+       * 这样就能避免“优先级翻转”以及“嵌套”这种情况了
+       *
+       * 由于已经有线程持有lock了，
+       * 所以我们不需要在这里将lock赋给任意一个线程，
+       * 所需要的就是提升优先级，
+       * 尽可能的让当前持有lock的线程运行完毕，
+       * 将lock释放出去
+       */
+      /* 在acquire_list中找到持有lock的线程 */
+      lock_holder_elem = get_lock_holder_elem(
+              &lock -> acquire_list,
+              &lock -> holder,
+              NULL;
+      );
+      /* 将这个线程及其之后的线程的优先级全部提升到priority_max */
+      for (
+              temp = lock_holder_elem; 
+              temp != list_end(&lock -> acquire_list); 
+              temp = list_next(temp)
+      ) {
+          priority_swap_to_max(temp, priority_max);
+      }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
