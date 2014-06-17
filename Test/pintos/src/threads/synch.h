@@ -60,7 +60,7 @@ void cond_broadcast (struct condition *, struct lock *);
 bool priority_cmp(
         const struct list_elem *a,
         const struct list_elem *b,
-        void *aux UNUSED
+        void *aux
 );
 
 /* 判断是不是有线程持有lock */

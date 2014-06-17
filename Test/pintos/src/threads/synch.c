@@ -183,7 +183,7 @@ lock_init (struct lock *lock)
   /* 初始化承载链表中最高优先级的变量，初值设为-1 */
   lock -> priority_max = -1;
   /* 初始化lock中用于管理相关线程的链表 */
-  list_init(lock -> acquire_list);
+  list_init(&lock -> acquire_list);
 }
 
 /*
@@ -193,7 +193,7 @@ lock_init (struct lock *lock)
 bool priority_cmp(
         const struct list_elem *a,
         const struct list_elem *b,
-        void *aux UNUSED
+        void *aux
 ) {
     struct thread *ta = list_entry(a, struct thread, elem);
     struct thread *tb = list_entry(b, struct thread, elem);
@@ -223,11 +223,11 @@ struct list_elem *get_lock_holder_elem(
 ) {
     struct list_elem *e;
     struct thread *t;
-    
+
     /* 在acquire_list中遍历查找 */
     for (
-            e = list_begin(acquire_list); 
-            e != list_end(acquire_list); 
+            e = list_begin(acquire_list);
+            e != list_end(acquire_list);
             e = list_next(e)
     ) {
         t = list_entry(e, struct thread, elem);
@@ -287,9 +287,9 @@ lock_acquire (struct lock *lock)
       lock -> priority_max = thread_current() -> priority;
   }
 
-  /* 
+  /*
    * 首先把当前请求的线程按照优先级升序加入到acquire_list中
-   * 
+   *
    * 注意，
    * 一个线程如果没有获得lock，
    * 那么它就会被被阻塞，
@@ -297,8 +297,8 @@ lock_acquire (struct lock *lock)
    * 所以理论上acquire_list中应该不会出现重复的元素
    */
   list_insert_ordered(
-          &(lock -> acquire_list),
-          &(thread_current() -> elem),
+          &lock -> acquire_list,
+          &thread_current() -> elem,
           (list_less_func *) &priority_cmp,
           NULL
   );
@@ -344,17 +344,18 @@ lock_acquire (struct lock *lock)
       /* 在acquire_list中找到持有lock的线程 */
       lock_holder_elem = get_lock_holder_elem(
               &lock -> acquire_list,
-              &lock -> holder,
-              NULL;
+              lock -> holder,
+              NULL
       );
       /* 将这个线程及其之后的线程的优先级全部提升到priority_max */
       for (
-              temp = lock_holder_elem; 
-              temp != list_end(&lock -> acquire_list); 
+              temp = lock_holder_elem;
+              temp != list_end(&lock -> acquire_list);
               temp = list_next(temp)
       ) {
-          priority_swap_to_max(temp, priority_max);
+          priority_swap_to_max(temp, lock -> priority_max);
       }
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
