@@ -57,17 +57,15 @@ sema_init (struct semaphore *sema, unsigned value)
  *   interrupt handler.  This function may be called with
  *   interrupts disabled, but if it sleeps then the next scheduled
  *   thread will probably turn interrupts back on. */
-void
-sema_down (struct semaphore *sema)
-{
+void sema_down (struct semaphore *sema) {
     enum intr_level old_level;
 
     ASSERT (sema != NULL);
-    ASSERT (!intr_context ());
+    ASSERT (!intr_context());
 
-    old_level = intr_disable ();
-    while (sema->value == 0)
-    {
+    old_level = intr_disable();
+    /* 如果信号量已经为0，则把请求信号量的线程都加入阻塞队列waiters中 */
+    while (sema -> value == 0) {
         /*
          * list_push_back (&sema->waiters, &thread_current ()->elem);
          * 这里使用的是直接尾插，
@@ -79,11 +77,24 @@ sema_down (struct semaphore *sema)
                 (list_less_func *) &priority_cmp,
                 NULL
         );
-
-        thread_block ();
+        /* 将这个申请信号量的线程阻塞 */
+        thread_block();
     }
-    sema->value--;
-    intr_set_level (old_level);
+    /*
+     * 这里使sema -> value--，
+     * 并不是说每次调用sema_down()函数的时候都会执行这个操作，
+     * 显然只有在sema -> value > 0的时候才会执行；
+     * 当sema -> value == 0时，
+     * sema_down()函数将进入while()循环，
+     * 然后调用sema_down()函数的这个线程会因为thread_block()而阻塞，
+     * 所以不会进行下一步的操作，
+     * 因此sema -> value--不会被执行
+     *
+     * 不过这里仍然有很多疑点值得商榷，
+     * 我们暂时搁置一边，不予讨论
+     */
+    sema -> value--;
+    intr_set_level(old_level);
 }
 
 /* Down or "P" operation on a semaphore, but only if the
@@ -201,9 +212,7 @@ lock_init (struct lock *lock)
  *   interrupt handler.  This function may be called with
  *   interrupts disabled, but interrupts will be turned back on if
  *   we need to sleep. */
-void
-lock_acquire (struct lock *lock)
-{
+void lock_acquire (struct lock *lock) {
     ASSERT (lock != NULL);
     ASSERT (!intr_context ());
     ASSERT (!lock_held_by_current_thread (lock));
@@ -215,15 +224,23 @@ lock_acquire (struct lock *lock)
      * 我们着重需要研究的就是如何处理这个队列，
      * 也许需要修改sema_down()函数的实现方式
      */
-    sema_down (&lock->semaphore);
+    sema_down(&lock -> semaphore);
     /*
-     * 根据synch.h中的注释，
-     * lock -> holder是用来debug用的，
-     * 也就是说，
-     * 我们不用在意lock -> holder到底指代的是什么东西，
-     * 所以在这里只需要关注semaphore -> waiters队列就可以了
+     * holder在这里的意思就是“持有lock的线程”，
+     * 因为只有最初lock的值为1的时候，
+     * 线程才会持有lock，
+     * 之后lock的值会变成0，
+     * 从而导致sema_down()之后线程被阻塞，
+     * 此时lock -> holder = thread_current()将不会被执行
      */
-    lock->holder = thread_current ();
+    lock -> holder = thread_current();
+    /*
+     * 获取lock之后，
+     * 将线程中的hold_lock与获取的lock相关联，
+     * 同理由于sema_down()导致线程阻塞后，
+     * thread_current() -> hold_lock = lock这一步将不会被执行到
+     */
+    thread_current() -> hold_lock = lock;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -251,15 +268,13 @@ lock_try_acquire (struct lock *lock)
  *   An interrupt handler cannot acquire a lock, so it does not
  *   make sense to try to release a lock within an interrupt
  *   handler. */
-void
-lock_release (struct lock *lock)
-{
+void lock_release (struct lock *lock) {
     ASSERT (lock != NULL);
     ASSERT (lock_held_by_current_thread (lock));
 
-    lock->holder = NULL;
+    lock -> holder = NULL;
     /* 也许需要修改sema_up()函数的实现方式 */
-    sema_up (&lock->semaphore);
+    sema_up(&lock -> semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false

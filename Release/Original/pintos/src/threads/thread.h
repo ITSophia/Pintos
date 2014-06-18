@@ -93,6 +93,12 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* 记录优先级翻转前的优先级 */
+    int origin_priority;
+
+    /* 记录线程持有的lock */
+    struct lock *hold_lock;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
