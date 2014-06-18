@@ -43,9 +43,9 @@ void cond_broadcast (struct condition *, struct lock *);
 
 /*
  * 定义一个比较线程priority高低的函数，
- * 用于semaphore -> waiters队列从低到高的排序
+ * 用于semaphore -> waiters队列“从低到高”的排序
  */
-bool priority_cmp_max_low_to_max(
+bool priority_cmp_low_to_max(
     const struct list_elem *a,
     const struct list_elem *b,
     void *aux
@@ -53,9 +53,9 @@ bool priority_cmp_max_low_to_max(
 
 /*
  * 定义一个比较线程priority高低的函数，
- * 用于semaphore -> waiters队列从高到低的排序
+ * 用于semaphore -> waiters队列“从高到低”的排序
  */
-bool priority_cmp_max_max_to_low(=
+bool priority_cmp_max_to_low(=
     const struct list_elem *a,
     const struct list_elem *b,
     void *aux
@@ -66,6 +66,16 @@ bool priority_cmp_max_max_to_low(=
  * 用于semaphore -> waiters队列“从低到高”的排序
  */
 bool origin_priority_cmp_low_to_max(
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux
+);
+
+/*
+ * 定义一个比较线程origin_priority高低的函数，
+ * 用于semaphore -> waiters队列“从高到低”的排序
+ */
+bool origin_priority_cmp_max_to_low(
     const struct list_elem *a,
     const struct list_elem *b,
     void *aux

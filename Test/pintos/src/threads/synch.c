@@ -63,8 +63,8 @@ sema_init (struct semaphore *sema, unsigned value)
 void sema_down(struct semaphore *sema) {
     enum intr_level old_level;
 
-    ASSERT (sema != NULL);
-    ASSERT (!intr_context());
+    ASSERT(sema != NULL);
+    ASSERT(!intr_context());
 
     old_level = intr_disable();
 
@@ -98,7 +98,7 @@ void sema_down(struct semaphore *sema) {
         /* 将这个申请信号量的线程阻塞 */
         thread_block();
     }
-    
+
     /*
      * 这里使sema -> value--，
      * 并不是说每次调用sema_down()函数的时候都会执行这个操作，
@@ -113,10 +113,14 @@ void sema_down(struct semaphore *sema) {
      * 我们暂时搁置一边，不予讨论
      */
     sema -> value--;
+
     /* 捕获获取临界值的线程 */
     if (sema -> value == 0) {
         thread_current() -> is_hold_lock = true;
+    } else {
+        thread_current() -> is_hold_lock = false;
     }
+
     intr_set_level(old_level);
 }
 
@@ -242,18 +246,15 @@ void lock_acquire(struct lock *lock) {
     ASSERT(!intr_context ());
     ASSERT(!lock_held_by_current_thread (lock));
 
-    /* 一些必要的初始化操作 */
-    thread_current() -> is_hold_lock = false;
-    thread_current() -> hold_lock = NULL;
-
     /*
      * 凡是有一个lock的acquire，
      * 都将发出这个acquire的线程加入到waiters队列中，
-     * 这个waiter队列实际上是一个阻塞队列，
+     * 这个waiters队列实际上是一个阻塞队列，
      * 我们着重需要研究的就是如何处理这个队列，
      * 也许需要修改sema_down()函数的实现方式
      */
     sema_down(&lock -> semaphore);
+
     /*
      * holder在这里的意思就是“持有lock的线程”，
      * 因为只有最初lock的值为1的时候，
@@ -461,6 +462,25 @@ bool origin_priority_cmp_low_to_max(
     }
 }
 
+/*
+ * 定义一个比较线程origin_priority高低的函数，
+ * 用于semaphore -> waiters队列“从高到低”的排序
+ */
+bool origin_priority_cmp_max_to_low(
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux UNUSED
+) {
+    struct thread *ta = list_entry(a, struct thread, elem);
+    struct thread *tb = list_entry(b, struct thread, elem);
+
+    /* 使origin_priority“从高到低”排列 */
+    if ((ta -> origin_priority) < (tb -> origin_priority)) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 /* 定义一个用于处理“优先级翻转”的函数 */
 void priority_inversion(struct semaphore *sema) {
@@ -472,6 +492,7 @@ void priority_inversion(struct semaphore *sema) {
 
     /* 对请求队列中的线程按照origin_priority“从低到高”进行排序 */
     list_sort(waiters, &origin_priority_cmp_low_to_max, NULL);
+
     /* 找到waiters队列中持有lock的那一个线程 */
     for (e = list_begin(waiters); e != list_end(waiters); e = list_next(e)) {
         t = list_entry(e, struct thread, elem);
@@ -479,16 +500,19 @@ void priority_inversion(struct semaphore *sema) {
             break;
         }
     }
+
     /* 改变当前持有lock的线程及其之后的线程的优先级 */
     for ( ; e != list_end(waiters); e = list_next(e)) {
         t = list_entry(e, struct thread, elem);
         t -> priority = priority_inversion_max;
     }
+
     /*
      * 对请求队列中的线程按照priority“从高到低”进行排序，
      * 这一步之后，
      * waiters队列应该就是我们需要的样子了
      */
     list_sort(waiters, &priority_cmp_max_to_low, NULL);
+
     /* Maybe more */
 }
