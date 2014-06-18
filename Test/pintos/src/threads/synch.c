@@ -81,6 +81,7 @@ void sema_down(struct semaphore *sema) {
         if (thread_current() -> origin_priority > priority_inversion_max) {
             priority_inversion_max = thread_current() -> origin_priority;
         }
+
         /*
          * list_push_back (&sema->waiters, &thread_current ()->elem);
          * 这里使用的是直接尾插，
@@ -90,11 +91,13 @@ void sema_down(struct semaphore *sema) {
         list_insert_ordered(
                 &sema -> waiters,
                 &thread_current() -> elem,
-                (list_less_func *) &priority_cmp_low_to_max,
+                (list_less_func *) &origin_priority_cmp_low_to_max,
                 NULL
         );
+
         /* Do something */
         priority_inversion(sema);
+
         /* 将这个申请信号量的线程阻塞 */
         thread_block();
     }
@@ -165,6 +168,7 @@ void sema_up(struct semaphore *sema) {
     if (!list_empty(&sema -> waiters)) {
         t = list_entry(list_pop_front(waiters), struct thread, elem);
         thread_unblock(t);
+
         /* 唤醒线程之后，记住恢复其优先级 */
         t -> priority = t -> origin_priority;
     }

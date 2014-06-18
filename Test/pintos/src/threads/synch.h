@@ -55,7 +55,7 @@ bool priority_cmp_low_to_max(
  * 定义一个比较线程priority高低的函数，
  * 用于semaphore -> waiters队列“从高到低”的排序
  */
-bool priority_cmp_max_to_low(=
+bool priority_cmp_max_to_low(
     const struct list_elem *a,
     const struct list_elem *b,
     void *aux
