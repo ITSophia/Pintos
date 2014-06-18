@@ -96,8 +96,8 @@ struct thread
     /* 记录优先级翻转前的优先级 */
     int origin_priority;
 
-    /* 记录线程持有的lock */
-    struct lock *hold_lock;
+    /* 记录是否持有lock */
+    bool is_hold_lock;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

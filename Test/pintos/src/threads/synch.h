@@ -42,14 +42,37 @@ void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
 /*
- * 定义一个比较线程优先级高低的函数，
- * 用于semaphore -> waiter队列的有序插入
+ * 定义一个比较线程priority高低的函数，
+ * 用于semaphore -> waiters队列从低到高的排序
  */
-bool priority_cmp(
+bool priority_cmp_max_low_to_max(
     const struct list_elem *a,
     const struct list_elem *b,
     void *aux
 );
+
+/*
+ * 定义一个比较线程priority高低的函数，
+ * 用于semaphore -> waiters队列从高到低的排序
+ */
+bool priority_cmp_max_max_to_low(=
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux
+);
+
+/*
+ * 定义一个比较线程origin_priority高低的函数，
+ * 用于semaphore -> waiters队列“从低到高”的排序
+ */
+bool origin_priority_cmp_low_to_max(
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux
+);
+
+/* 定义一个用于处理“优先级翻转”的函数 */
+void priority_inversion(struct semaphore *sema);
 
 /* Optimization barrier.
  *
