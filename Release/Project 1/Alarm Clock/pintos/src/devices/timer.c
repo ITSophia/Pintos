@@ -158,7 +158,7 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
@@ -250,7 +250,7 @@ bool ticks_cmp(
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
-void timer_sleep (int64_t ticks) {
+void timer_sleep(int64_t ticks) {
     /* 定义一个thread变量，用于捕获当前线程 */
     struct thread *get_current_thread;
     enum intr_level old_level;
@@ -283,7 +283,7 @@ void timer_sleep (int64_t ticks) {
 }
 
 /* Timer interrupt handler. */
-static void timer_interrupt (struct intr_frame *args UNUSED) {
+static void timer_interrupt(struct intr_frame *args UNUSED) {
     struct list_elem *temp_elem;
     /* ticks是从OS启动开始就一直存在的，在这里时其自加 */
     ticks++;
