@@ -32,8 +32,11 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
-/* 设置“优先级翻转”的最大量 */
-static int priority_inversion_max;
+/* 获取waiters队列中最高的线程优先级 */
+int priority_inversion_max;
+
+/* 捕获当前拥有临界量的线程 */
+static struct thread *thread_holder;
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
  *   nonnegative integer along with two atomic operators for
@@ -77,7 +80,7 @@ void sema_down(struct semaphore *sema) {
 
     /* 如果信号量已经为0，则把请求信号量的线程都加入阻塞队列waiters中 */
     while (sema -> value == 0) {
-        /* 获取waiters队列中最高的优先级 */
+        /* 捕获最高线程优先级 */
         if (thread_current() -> origin_priority > priority_inversion_max) {
             priority_inversion_max = thread_current() -> origin_priority;
         }
@@ -119,9 +122,8 @@ void sema_down(struct semaphore *sema) {
 
     /* 捕获获取临界值的线程 */
     if (sema -> value == 0) {
-        thread_current() -> is_hold_lock = true;
-    } else {
-        thread_current() -> is_hold_lock = false;
+        thread_holder = thread_current();
+//         printf("(sema_down) thread_holder -> name = %s\n", thread_holder -> name);
     }
 
     intr_set_level(old_level);
@@ -169,8 +171,8 @@ void sema_up(struct semaphore *sema) {
         t = list_entry(list_pop_front(waiters), struct thread, elem);
         thread_unblock(t);
 
-        /* 唤醒线程之后，记住恢复其优先级 */
-        t -> priority = t -> origin_priority;
+        /* 记住恢复当前调用seam_up()函数的线程的优先级 */
+        thread_current() -> priority = thread_current() -> origin_priority;
     }
     sema -> value++;
     intr_set_level(old_level);
@@ -488,35 +490,27 @@ bool origin_priority_cmp_max_to_low(
 
 /* 定义一个用于处理“优先级翻转”的函数 */
 void priority_inversion(struct semaphore *sema) {
-    struct list_elem *e;
-    struct thread *t;
-
     /* 取得与信号量相关的请求队列 */
     struct list *waiters = &sema -> waiters;
 
     /* 对请求队列中的线程按照origin_priority“从低到高”进行排序 */
     list_sort(waiters, &origin_priority_cmp_low_to_max, NULL);
 
-    /* 找到waiters队列中持有lock的那一个线程 */
-    for (e = list_begin(waiters); e != list_end(waiters); e = list_next(e)) {
-        t = list_entry(e, struct thread, elem);
-        if (t -> is_hold_lock == true) {
-            break;
-        }
-    }
+//     enum intr_level old_level = intr_disable();
+//     printf("(priority_inversion) priority_inversion_max = %d\n", priority_inversion_max);
+//     intr_set_level(old_level);
 
-    /* 改变当前持有lock的线程及其之后的线程的优先级 */
-    for ( ; e != list_end(waiters); e = list_next(e)) {
-        t = list_entry(e, struct thread, elem);
-        t -> priority = priority_inversion_max;
-    }
+    /* 将max_priority赋给当前正在运行的线程 */
+    thread_holder -> priority = priority_inversion_max;
 
-    /*
-     * 对请求队列中的线程按照priority“从高到低”进行排序，
-     * 这一步之后，
-     * waiters队列应该就是我们需要的样子了
-     */
-    list_sort(waiters, &priority_cmp_max_to_low, NULL);
-
-    /* Maybe more */
+//     struct list_elem *e;
+//     struct thread *t;
+//     int max = -1;
+//     for (e = list_begin(waiters); e != list_end(waiters); e = list_next(e)) {
+//         t = list_entry(e, struct thread, elem);
+//         if ((t -> origin_priority) > max) {
+//             max = t -> origin_priority;
+//         }
+//     }
+//     thread_holder -> priority = max;
 }
