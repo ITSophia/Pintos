@@ -493,8 +493,10 @@ void priority_inversion(struct semaphore *sema) {
     /* 取得与信号量相关的请求队列 */
     struct list *waiters = &sema -> waiters;
 
-    /* 对请求队列中的线程按照origin_priority“从低到高”进行排序 */
-    list_sort(waiters, &origin_priority_cmp_low_to_max, NULL);
+//     /* 对请求队列中的线程按照origin_priority“从低到高”进行排序 */
+//     list_sort(waiters, &origin_priority_cmp_low_to_max, NULL);
+
+    list_sort(waiters, &origin_priority_cmp_max_to_low, NULL);
 
 //     enum intr_level old_level = intr_disable();
 //     printf("(priority_inversion) priority_inversion_max = %d\n", priority_inversion_max);

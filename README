@@ -8,7 +8,8 @@ https://mthli.github.io
     1. Doc -- 用于存放一些Pintos相关的参考资料
     2. Release -- 存放了各个Project的完成部分
     3. Test -- 当前正在进行相关代码实现的文件夹
-    4. README -- README文件
+    4. Trash -- 回收站
+    5. README -- README文件
 
 进度：
     Project 1 -- Threads

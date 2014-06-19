@@ -368,14 +368,16 @@ void thread_set_priority(int new_priority)
      * 则首先将该线程的优先级设置为new_priority，
      * 然后使该线程放弃对CPU的占用
      */
-    if ((thread_current() -> priority) <= new_priority) {
-        thread_current() -> priority = new_priority;
+    if ((thread_current() -> origin_priority) <= new_priority) {
+        thread_current() -> origin_priority = new_priority;
+        thread_current() -> priority = thread_current() -> origin_priority;
 
         count_set++;
         printf("(thread_set_priority %d) #1 thread_set_priority after = %d\n", count_set, thread_current() -> priority);
 
     } else {
-        thread_current() -> priority = new_priority;
+        thread_current() -> origin_priority = new_priority;
+        thread_current() -> priority = thread_current() -> origin_priority;
 
         count_set++;
         printf("(thread_set_priority %d) #2 thread_set_priority after = %d\n", count_set, thread_current() -> priority);
@@ -396,10 +398,10 @@ int thread_get_priority(void) {
     old_level = intr_disable();
     tmp_priority = thread_current() -> priority;
 
-    count_get++;
-    printf("(thread_get_priority %d) thread_current() -> name = %s\n", count_get, thread_current() -> name);
-    count_get++;
-    printf("(thread_get_priority %d) thread_get_priority = %d\n", count_get, tmp_priority);
+    count_set++;
+    printf("(thread_get_priority %d) thread_current() -> name = %s\n", count_set, thread_current() -> name);
+    count_set++;
+    printf("(thread_get_priority %d) thread_get_priority = %d\n", count_set, tmp_priority);
 
     intr_set_level(old_level);
     return tmp_priority;
