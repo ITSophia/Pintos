@@ -107,13 +107,13 @@ struct thread {
      *    显然持有lock A与申请获取lock B两者并不冲突，
      *    上述情况是普遍存在的；
      *    wait_on_lock变量在解决“优先级继承”中的“嵌套”问题也有重要作用
-     * 2. struct list *donation_list
+     * 2. struct list donation_list
      *    我之前使用semaphore的waiters队列来管理与一个lock有关的所有线程，
      *    尽管这样子看上去没有什么问题，
      *    我也不排除存在这样的解决方式，
      *    但显然这样会使得管理与lock相关的线程变得非常的困难，
      *    尤其是在面对“优先级继承”的“嵌套”问题上
-     * 3. struct list_elem *donation_list_elem
+     * 3. struct list_elem donation_list_elem
      *    既然都定义了donation_list，
      *    那么定义一个donation_list_elem也没有什么问题
      * 4. int init_priority
@@ -141,8 +141,8 @@ struct thread {
      *    也只有在实现之后才能体会到它的巧妙
      */
     struct lock *wait_on_lock;
-    struct list *donation_list;
-    struct list_elem *donation_list_elem;
+    struct list donation_list;
+    struct list_elem donation_list_elem;
     int init_priority;
 
     #ifdef USERPROG

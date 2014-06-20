@@ -490,7 +490,7 @@ static void init_thread(struct thread *t, const char *name, int priority) {
 
     /* 初始化2.2.3 Priority Scheduling中用到的变量 */
     t -> wait_on_lock = NULL;
-    list_init(t -> donation_list);
+    list_init(&t -> donation_list);
     t -> init_priority = priority;
 
     list_push_back(&all_list, &t -> allelem);
@@ -613,13 +613,13 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 /* 刷新当前线程的优先级 */
 void refresh_priority(void) {
     struct thread *c;
-    struct thread *f
+    struct thread *f;
 
     c = thread_current();
     c -> priority = c -> init_priority;
-    if (!list_empty(c -> donation_list) {
+    if (!list_empty(&c -> donation_list)) {
         f = list_entry(
-                list_front(t -> donation_list),
+                list_front(&c -> donation_list),
                 struct thread,
                 donation_list_elem
         );
@@ -699,8 +699,8 @@ void remove_with_lock(struct lock *lock) {
     struct thread *t;
 
     for (
-            e = list_begin(thread_current() -> donation_list);
-            e != list_end(thread_current() -> donation_list);
+            e = list_begin(&thread_current() -> donation_list);
+            e != list_end(&thread_current() -> donation_list);
             e = list_next(e)
     ) {
         t = list_entry(e, struct thread, donation_list_elem);

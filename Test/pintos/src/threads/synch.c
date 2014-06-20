@@ -208,8 +208,8 @@ void lock_acquire(struct lock *lock) {
         thread_current() -> wait_on_lock = lock;
         /* 记住按照优先级降序插入到持有lock的线程的donation_list中 */
         list_insert_ordered(
-                lock -> holder -> donation_list,
-                thread_current() -> donation_list_elem,
+                &lock -> holder -> donation_list,
+                &thread_current() -> donation_list_elem,
                 (list_less_func *) &cmp_priority,
                 NULL
         );
