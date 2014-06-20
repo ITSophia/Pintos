@@ -241,7 +241,17 @@ void thread_unblock(struct thread *t) {
 
     old_level = intr_disable();
     ASSERT(t -> status == THREAD_BLOCKED);
-    list_push_back(&ready_list, &t -> elem);
+    /*
+     * 注释掉原有的代码
+     * list_push_back(&ready_list, &t -> elem);
+     */
+    list_insert_ordered(
+            &ready_list,
+            &t -> elem,
+            (list_less_func *) &cmp_priority,
+            NULL
+    );
+
     t -> status = THREAD_READY;
     intr_set_level(old_level);
 }
@@ -302,20 +312,28 @@ thread_exit (void)
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
-void
-thread_yield (void)
-{
-  struct thread *cur = thread_current ();
-  enum intr_level old_level;
+void thread_yield(void) {
+    struct thread *cur = thread_current();
+    enum intr_level old_level;
 
-  ASSERT (!intr_context ());
+    ASSERT(!intr_context());
 
-  old_level = intr_disable ();
-  if (cur != idle_thread)
-    list_push_back (&ready_list, &cur->elem);
-  cur->status = THREAD_READY;
-  schedule ();
-  intr_set_level (old_level);
+    old_level = intr_disable();
+    if (cur != idle_thread) {
+        /*
+         * 注释掉原有的代码
+         * list_push_back (&ready_list, &cur->elem);
+         */
+        list_insert_ordered(
+                &ready_list,
+                &cur -> elem,
+                (list_less_func *) &cmp_priority,
+                NULL
+        );
+    }
+    cur -> status = THREAD_READY;
+    schedule();
+    intr_set_level (old_level);
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
@@ -342,8 +360,10 @@ void thread_set_priority(int new_priority) {
      * thread_current ()->priority = new_priority;
      */
 
+    enum intr_level old_level;
     int old_priority;
 
+    old_level = intr_disable();
     /* 获取当前线程的优先级 */
     old_priority = thread_current() -> priority;
     /* 把new_priority赋给init_priority，将会被用于refresh_priority()函数 */
@@ -367,11 +387,15 @@ void thread_set_priority(int new_priority) {
     if (old_priority > thread_current() -> priority) {
         test_yield();
     }
+    intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
 int thread_get_priority(void) {
-    return thread_current() -> priority;
+    enum intr_level old_level = intr_disable();
+    int tmp = thread_current() -> priority;
+    intr_set_level(old_level);
+    return tmp;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -617,23 +641,24 @@ void refresh_priority(void) {
 
     c = thread_current();
     c -> priority = c -> init_priority;
-    if (!list_empty(&c -> donation_list)) {
-        f = list_entry(
-                list_front(&c -> donation_list),
-                struct thread,
-                donation_list_elem
-        );
-        /*
-         * 显然，
-         * 当前线程的优先级不可能比它自身的donation_list中的线程的优先级要低，
-         * 也就是说，
-         * 当前线程的优先级设置的最低限度是其自身donation_list中优先级最高的线程的优先级
-         */
-        if ((f -> priority) > (c -> priority)) {
-            c -> priority = f -> priority;
-        }
-    } else {
+
+    if (list_empty(&c -> donation_list)) {
         return;
+    }
+
+    f = list_entry(
+            list_front(&c -> donation_list),
+            struct thread,
+            donation_list_elem
+    );
+    /*
+     * 显然，
+     * 当前线程的优先级不可能比它自身的donation_list中的线程的优先级要低，
+     * 也就是说，
+     * 当前线程的优先级设置的最低限度是其自身donation_list中优先级最高的线程的优先级
+     */
+    if ((f -> priority) > (c -> priority)) {
+        c -> priority = f -> priority;
     }
 }
 
