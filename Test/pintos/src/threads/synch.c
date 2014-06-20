@@ -71,9 +71,7 @@ void sema_down(struct semaphore *sema) {
          * thread_block();
          */
 
-        if (!thread_mlfqs) {
-             donate_priority();
-        }
+        donate_priority();
 
         list_insert_ordered(
                 &sema -> waiters,
@@ -145,9 +143,7 @@ void sema_up(struct semaphore *sema) {
     }
     sema -> value++;
 
-    if (!intr_context()) {
-        test_yield();
-    }
+    test_yield();
 
     intr_set_level(old_level);
 }
@@ -235,7 +231,7 @@ void lock_acquire(struct lock *lock) {
     enum intr_level old_level = intr_disable();
 
     /* 如果lock已经被持有 */
-    if (!thread_mlfqs && lock -> holder) {
+    if (lock -> holder) {
         /* 设置当前线程正在等待的lock */
         thread_current() -> wait_on_lock = lock;
         /* 记住按照优先级降序插入到持有lock的线程的donation_list中 */
@@ -305,10 +301,8 @@ void lock_release(struct lock *lock) {
     enum intr_level old_level = intr_disable();
 
     lock -> holder = NULL;
-    if (!thread_mlfqs) {
-        remove_with_lock(lock);
-        refresh_priority();
-    }
+    remove_with_lock(lock);
+    refresh_priority();
     sema_up(&lock -> semaphore);
 
     intr_set_level(old_level);

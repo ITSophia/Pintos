@@ -333,7 +333,7 @@ void thread_yield(void) {
     }
     cur -> status = THREAD_READY;
     schedule();
-    intr_set_level (old_level);
+    intr_set_level(old_level);
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
