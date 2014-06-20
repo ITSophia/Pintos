@@ -206,4 +206,7 @@ bool cmp_priority (
     void *aux
 );
 
+/* 判断设置优先级过后，当前线程是否应该放弃对CPU的占用 */
+void test_yield(void);
+
 #endif /* threads/thread.h */

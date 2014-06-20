@@ -365,7 +365,7 @@ void thread_set_priority(int new_priority) {
      * 则通过donate_yield()函数测试当前线程是否需要放弃对CPU的占用
      */
     if (old_priority > thread_current() -> priority) {
-        donate_yield();
+        test_yield();
     }
 }
 
@@ -632,6 +632,8 @@ void refresh_priority(void) {
         if ((f -> priority) > (c -> priority)) {
             c -> priority = f -> priority;
         }
+    } else {
+        return;
     }
 }
 
@@ -720,4 +722,23 @@ bool cmp_priority (
         return true;
     }
     return false;
+}
+
+/* 判断设置优先级过后，当前线程是否应该放弃对CPU的占用 */
+void test_yield(void) {
+    struct thread *t;
+
+    if (list_empty(&ready_list)) {
+        return;
+    }
+
+    t = list_entry(
+            list_front(&ready_list),
+            struct thread,
+            elem
+    );
+
+    if ((thread_current() -> priority) < t -> priority) {
+        thread_yield();
+    }
 }
