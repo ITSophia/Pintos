@@ -147,137 +147,6 @@ thread_print_stats (void)
           idle_ticks, kernel_ticks, user_ticks);
 }
 
-/* Creates a new kernel thread named NAME with the given initial
-   PRIORITY, which executes FUNCTION passing AUX as the argument,
-   and adds it to the ready queue.  Returns the thread identifier
-   for the new thread, or TID_ERROR if creation fails.
-
-   If thread_start() has been called, then the new thread may be
-   scheduled before thread_create() returns.  It could even exit
-   before thread_create() returns.  Contrariwise, the original
-   thread may run for any amount of time before the new thread is
-   scheduled.  Use a semaphore or some other form of
-   synchronization if you need to ensure ordering.
-
-   The code provided sets the new thread's `priority' member to
-   PRIORITY, but no actual priority scheduling is implemented.
-   Priority scheduling is the goal of Problem 1-3. */
-tid_t thread_create(
-        const char *name,
-        int priority,
-        thread_func *function,
-        void *aux
-) {
-    struct thread *t;
-    struct kernel_thread_frame *kf;
-    struct switch_entry_frame *ef;
-    struct switch_threads_frame *sf;
-    tid_t tid;
-    enum intr_level old_level;
-
-    ASSERT(function != NULL);
-
-    /* Allocate thread. */
-    t = palloc_get_page(PAL_ZERO);
-    if (t == NULL) {
-        return TID_ERROR;
-    }
-
-    /* Initialize thread. */
-    init_thread(t, name, priority);
-    tid = t -> tid = allocate_tid();
-
-    /* Prepare thread for first run by initializing its stack.
-     *    Do this atomically so intermediate values for the 'stack'
-     *    member cannot be observed. */
-    old_level = intr_disable();
-
-    /* Stack frame for kernel_thread(). */
-    kf = alloc_frame(t, sizeof *kf);
-    kf -> eip = NULL;
-    kf -> function = function;
-    kf -> aux = aux;
-
-    /* Stack frame for switch_entry(). */
-    ef = alloc_frame(t, sizeof *ef);
-    ef -> eip = (void (*) (void)) kernel_thread;
-
-    /* Stack frame for switch_threads(). */
-    sf = alloc_frame(t, sizeof *sf);
-    sf -> eip = switch_entry;
-    sf -> ebp = 0;
-
-    intr_set_level(old_level);
-
-    /* Add to run queue. */
-    thread_unblock(t);
-
-    /*
-     * 测试是否需要使当前创造的线程让出CPU，
-     * 显然这样做是有充分的理由的，
-     * thread_create()函数在执行到上面的thread_unblock()函数的时候，已经是一个新的线程了，
-     * 然而这个新建的线程当前正占有CPU，
-     * 这显然是不完全正确的操作，
-     * 只有在新建的线程优先级在ready_list中最高的时候，它才能占用CPU，
-     * 否则应当立即放弃对CPU的占用，
-     * 因此我们需要调用test_yield()进行检测
-     *
-     * 这一步的操作也是相当关键啊，
-     * 之前一直搞不清楚为什么程序运行时显示的优先级总是与实际的不符合，
-     * 很大一部分的原因就是没用考虑到上述问题
-     */
-    old_level = intr_disable();
-    test_yield();
-    intr_set_level(old_level);
-
-    return tid;
-}
-
-/* Puts the current thread to sleep.  It will not be scheduled
-   again until awoken by thread_unblock().
-
-   This function must be called with interrupts turned off.  It
-   is usually a better idea to use one of the synchronization
-   primitives in synch.h. */
-void thread_block(void) {
-    ASSERT(!intr_context ());
-    ASSERT(intr_get_level () == INTR_OFF);
-
-    thread_current() -> status = THREAD_BLOCKED;
-    schedule();
-}
-
-/* Transitions a blocked thread T to the ready-to-run state.
-   This is an error if T is not blocked.  (Use thread_yield() to
-   make the running thread ready.)
-
-   This function does not preempt the running thread.  This can
-   be important: if the caller had disabled interrupts itself,
-   it may expect that it can atomically unblock a thread and
-   update other data. */
-void thread_unblock(struct thread *t) {
-    enum intr_level old_level;
-
-    ASSERT(is_thread(t));
-
-    old_level = intr_disable();
-    ASSERT(t -> status == THREAD_BLOCKED);
-    /*
-     * 注释掉原有的代码
-     * list_push_back(&ready_list, &t -> elem);
-     * 并按照优先级降序将线程插入到ready_list中
-     */
-    list_insert_ordered(
-            &ready_list,
-            &t -> elem,
-            (list_less_func *) &cmp_priority,
-            NULL
-    );
-
-    t -> status = THREAD_READY;
-    intr_set_level(old_level);
-}
-
 /* Returns the name of the running thread. */
 const char *
 thread_name (void)
@@ -332,32 +201,6 @@ thread_exit (void)
   NOT_REACHED ();
 }
 
-/* Yields the CPU.  The current thread is not put to sleep and
-   may be scheduled again immediately at the scheduler's whim. */
-void thread_yield(void) {
-    struct thread *cur = thread_current();
-    enum intr_level old_level;
-
-    ASSERT(!intr_context());
-
-    old_level = intr_disable();
-    if (cur != idle_thread) {
-        /*
-         * 注释掉原有的代码
-         * list_push_back (&ready_list, &cur->elem);
-         */
-        list_insert_ordered(
-                &ready_list,
-                &cur -> elem,
-                (list_less_func *) &cmp_priority,
-                NULL
-        );
-    }
-    cur -> status = THREAD_READY;
-    schedule();
-    intr_set_level(old_level);
-}
-
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void
@@ -373,55 +216,6 @@ thread_foreach (thread_action_func *func, void *aux)
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
-}
-
-/* Sets the current thread's priority to NEW_PRIORITY. */
-void thread_set_priority(int new_priority) {
-    /*
-     * 注释掉原有的代码
-     * thread_current ()->priority = new_priority;
-     */
-
-    enum intr_level old_level;
-    int old_priority;
-
-    if (thread_mlfqs) {
-        return;
-    }
-
-    old_level = intr_disable();
-    /* 获取当前线程的优先级 */
-    old_priority = thread_current() -> priority;
-    /* 把new_priority赋给init_priority，将会被用于refresh_priority()函数 */
-    thread_current() -> init_priority = new_priority;
-    /* 刷新当前线程的优先级 */
-    refresh_priority();
-    /*
-     * 如果设置完优先级之后，
-     * 当前线程的优先级比之前要高，
-     * 则必须从新donate_priority()，
-     * 因为涉及到“嵌套”问题
-     */
-    if (old_priority < thread_current() -> priority) {
-        donate_priority();
-    }
-    /*
-     * 如果设置完优先级之后，
-     * 当前线程的优先级比之前的要低，
-     * 则通过donate_yield()函数测试当前线程是否需要放弃对CPU的占用
-     */
-    if (old_priority > thread_current() -> priority) {
-        test_yield();
-    }
-    intr_set_level(old_level);
-}
-
-/* Returns the current thread's priority. */
-int thread_get_priority(void) {
-    enum intr_level old_level = intr_disable();
-    int tmp = thread_current() -> priority;
-    intr_set_level(old_level);
-    return tmp;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -523,27 +317,6 @@ static bool
 is_thread (struct thread *t)
 {
   return t != NULL && t->magic == THREAD_MAGIC;
-}
-
-/* Does basic initialization of T as a blocked thread named NAME. */
-static void init_thread(struct thread *t, const char *name, int priority) {
-    ASSERT(t != NULL);
-    ASSERT(PRI_MIN <= priority && priority <= PRI_MAX);
-    ASSERT(name != NULL);
-
-    memset(t, 0, sizeof(*t));
-    t -> status = THREAD_BLOCKED;
-    strlcpy((t -> name), name, sizeof(t -> name));
-    t -> stack = (uint8_t *) t + PGSIZE;
-    t -> priority = priority;
-    t -> magic = THREAD_MAGIC;
-
-    /* 初始化2.2.3 Priority Scheduling中用到的变量 */
-    t -> wait_on_lock = NULL;
-    list_init(&t -> donation_list);
-    t -> init_priority = priority;
-
-    list_push_back(&all_list, &t -> allelem);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -659,6 +432,235 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+/* 以下为为对源码的自定义部分或者修改部分 */
+
+/* Creates a new kernel thread named NAME with the given initial
+ *  PRIORITY, which executes FUNCTION passing AUX as the argument,
+ *  and adds it to the ready queue.  Returns the thread identifier
+ *  for the new thread, or TID_ERROR if creation fails.
+ *
+ *  If thread_start() has been called, then the new thread may be
+ *  scheduled before thread_create() returns.  It could even exit
+ *  before thread_create() returns.  Contrariwise, the original
+ *  thread may run for any amount of time before the new thread is
+ *  scheduled.  Use a semaphore or some other form of
+ *  synchronization if you need to ensure ordering.
+ *
+ *  The code provided sets the new thread's `priority' member to
+ *  PRIORITY, but no actual priority scheduling is implemented.
+ *  Priority scheduling is the goal of Problem 1-3. */
+tid_t thread_create(
+    const char *name,
+    int priority,
+    thread_func *function,
+    void *aux
+) {
+    struct thread *t;
+    struct kernel_thread_frame *kf;
+    struct switch_entry_frame *ef;
+    struct switch_threads_frame *sf;
+    tid_t tid;
+    enum intr_level old_level;
+
+    ASSERT(function != NULL);
+
+    /* Allocate thread. */
+    t = palloc_get_page(PAL_ZERO);
+    if (t == NULL) {
+        return TID_ERROR;
+    }
+
+    /* Initialize thread. */
+    init_thread(t, name, priority);
+    tid = t -> tid = allocate_tid();
+
+    /* Prepare thread for first run by initializing its stack.
+     *    Do this atomically so intermediate values for the 'stack'
+     *    member cannot be observed. */
+    old_level = intr_disable();
+
+    /* Stack frame for kernel_thread(). */
+    kf = alloc_frame(t, sizeof *kf);
+    kf -> eip = NULL;
+    kf -> function = function;
+    kf -> aux = aux;
+
+    /* Stack frame for switch_entry(). */
+    ef = alloc_frame(t, sizeof *ef);
+    ef -> eip = (void (*) (void)) kernel_thread;
+
+    /* Stack frame for switch_threads(). */
+    sf = alloc_frame(t, sizeof *sf);
+    sf -> eip = switch_entry;
+    sf -> ebp = 0;
+
+    intr_set_level(old_level);
+
+    /* Add to run queue. */
+    thread_unblock(t);
+
+    /*
+     * 测试是否需要使当前创造的线程让出CPU，
+     * 显然这样做是有充分的理由的，
+     * thread_create()函数在执行到上面的thread_unblock()函数的时候，已经是一个新的线程了，
+     * 然而这个新建的线程当前正占有CPU，
+     * 这显然是不完全正确的操作，
+     * 只有在新建的线程优先级在ready_list中最高的时候，它才能占用CPU，
+     * 否则应当立即放弃对CPU的占用，
+     * 因此我们需要调用test_yield()进行检测
+     *
+     * 这一步的操作也是相当关键啊，
+     * 之前一直搞不清楚为什么程序运行时显示的优先级总是与实际的不符合，
+     * 很大一部分的原因就是没用考虑到上述问题
+     */
+    old_level = intr_disable();
+    test_yield();
+    intr_set_level(old_level);
+
+    return tid;
+}
+
+/* Puts the current thread to sleep.  It will not be scheduled
+ *  again until awoken by thread_unblock().
+ *
+ *  This function must be called with interrupts turned off.  It
+ *  is usually a better idea to use one of the synchronization
+ *  primitives in synch.h. */
+void thread_block(void) {
+    ASSERT(!intr_context ());
+    ASSERT(intr_get_level () == INTR_OFF);
+
+    thread_current() -> status = THREAD_BLOCKED;
+    schedule();
+}
+
+/* Transitions a blocked thread T to the ready-to-run state.
+ *  This is an error if T is not blocked.  (Use thread_yield() to
+ *  make the running thread ready.)
+ *
+ *  This function does not preempt the running thread.  This can
+ *  be important: if the caller had disabled interrupts itself,
+ *  it may expect that it can atomically unblock a thread and
+ *  update other data. */
+void thread_unblock(struct thread *t) {
+    enum intr_level old_level;
+
+    ASSERT(is_thread(t));
+
+    old_level = intr_disable();
+    ASSERT(t -> status == THREAD_BLOCKED);
+    /*
+     * 注释掉原有的代码
+     * list_push_back(&ready_list, &t -> elem);
+     * 并按照优先级降序将线程插入到ready_list中
+     */
+    list_insert_ordered(
+        &ready_list,
+        &t -> elem,
+        (list_less_func *) &cmp_priority,
+                        NULL
+    );
+
+    t -> status = THREAD_READY;
+    intr_set_level(old_level);
+}
+
+/* Yields the CPU.  The current thread is not put to sleep and
+ *  may be scheduled again immediately at the scheduler's whim. */
+void thread_yield(void) {
+    struct thread *cur = thread_current();
+    enum intr_level old_level;
+
+    ASSERT(!intr_context());
+
+    old_level = intr_disable();
+    if (cur != idle_thread) {
+        /*
+         * 注释掉原有的代码
+         * list_push_back (&ready_list, &cur->elem);
+         */
+        list_insert_ordered(
+            &ready_list,
+            &cur -> elem,
+            (list_less_func *) &cmp_priority,
+                            NULL
+        );
+    }
+    cur -> status = THREAD_READY;
+    schedule();
+    intr_set_level(old_level);
+}
+
+/* Sets the current thread's priority to NEW_PRIORITY. */
+void thread_set_priority(int new_priority) {
+    /*
+     * 注释掉原有的代码
+     * thread_current ()->priority = new_priority;
+     */
+
+    enum intr_level old_level;
+    int old_priority;
+
+    if (thread_mlfqs) {
+        return;
+    }
+
+    old_level = intr_disable();
+    /* 获取当前线程的优先级 */
+    old_priority = thread_current() -> priority;
+    /* 把new_priority赋给init_priority，将会被用于refresh_priority()函数 */
+    thread_current() -> init_priority = new_priority;
+    /* 刷新当前线程的优先级 */
+    refresh_priority();
+    /*
+     * 如果设置完优先级之后，
+     * 当前线程的优先级比之前要高，
+     * 则必须从新donate_priority()，
+     * 因为涉及到“嵌套”问题
+     */
+    if (old_priority < thread_current() -> priority) {
+        donate_priority();
+    }
+    /*
+     * 如果设置完优先级之后，
+     * 当前线程的优先级比之前的要低，
+     * 则通过donate_yield()函数测试当前线程是否需要放弃对CPU的占用
+     */
+    if (old_priority > thread_current() -> priority) {
+        test_yield();
+    }
+    intr_set_level(old_level);
+}
+
+/* Returns the current thread's priority. */
+int thread_get_priority(void) {
+    enum intr_level old_level = intr_disable();
+    int tmp = thread_current() -> priority;
+    intr_set_level(old_level);
+    return tmp;
+}
+
+/* Does basic initialization of T as a blocked thread named NAME. */
+static void init_thread(struct thread *t, const char *name, int priority) {
+    ASSERT(t != NULL);
+    ASSERT(PRI_MIN <= priority && priority <= PRI_MAX);
+    ASSERT(name != NULL);
+
+    memset(t, 0, sizeof(*t));
+    t -> status = THREAD_BLOCKED;
+    strlcpy((t -> name), name, sizeof(t -> name));
+    t -> stack = (uint8_t *) t + PGSIZE;
+    t -> priority = priority;
+    t -> magic = THREAD_MAGIC;
+
+    /* 初始化2.2.3 Priority Scheduling中用到的变量 */
+    t -> wait_on_lock = NULL;
+    list_init(&t -> donation_list);
+    t -> init_priority = priority;
+
+    list_push_back(&all_list, &t -> allelem);
+}
 
 /* 刷新当前线程的优先级 */
 void refresh_priority(void) {
