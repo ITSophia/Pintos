@@ -501,13 +501,13 @@ tid_t thread_create(
     thread_unblock(t);
 
     /*
-     * 测试是否需要使当前创造的线程让出CPU，
+     * 测试是否需要使当前调用thread_create()函数的线程让出CPU，
      * 显然这样做是有充分的理由的，
-     * thread_create()函数在执行到上面的thread_unblock()函数的时候，已经是一个新的线程了，
-     * 然而这个新建的线程当前正占有CPU，
+     * thread_create()函数在执行完上面的thread_unblock()函数的时候，已经开创了一个新的线程了，
+     * 然而调用thread_create()的线程当前依然占有着CPU，
      * 这显然是不完全正确的操作，
-     * 只有在新建的线程优先级在ready_list中最高的时候，它才能占用CPU，
-     * 否则应当立即放弃对CPU的占用，
+     * 假如新建的线程的优先级比当前调用thread_create()函数的线程的优先级高的时候，
+     * 当前调用thread_create()函数的线程就应该立即让出CPU，
      * 因此我们需要调用test_yield()进行检测
      *
      * 这一步的操作也是相当关键啊，
