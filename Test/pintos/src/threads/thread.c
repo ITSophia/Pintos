@@ -209,6 +209,11 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /* 测试是否需要使当前线程让出CPU */
+  old_level = intr_disable();
+  test_yield();
+  intr_set_level(old_level);
+
   return tid;
 }
 
@@ -362,6 +367,10 @@ void thread_set_priority(int new_priority) {
 
     enum intr_level old_level;
     int old_priority;
+
+    if (thread_mlfqs) {
+        return;
+    }
 
     old_level = intr_disable();
     /* 获取当前线程的优先级 */
