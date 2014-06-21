@@ -556,10 +556,10 @@ void thread_unblock(struct thread *t) {
      * 并按照优先级降序将线程插入到ready_list中
      */
     list_insert_ordered(
-        &ready_list,
-        &t -> elem,
-        (list_less_func *) &cmp_priority,
-                        NULL
+            &ready_list,
+            &t -> elem,
+            (list_less_func *) &cmp_priority,
+            NULL
     );
 
     t -> status = THREAD_READY;
@@ -581,10 +581,10 @@ void thread_yield(void) {
          * list_push_back (&ready_list, &cur->elem);
          */
         list_insert_ordered(
-            &ready_list,
-            &cur -> elem,
-            (list_less_func *) &cmp_priority,
-                            NULL
+                &ready_list,
+                &cur -> elem,
+                (list_less_func *) &cmp_priority,
+                NULL
         );
     }
     cur -> status = THREAD_READY;
@@ -752,9 +752,9 @@ void remove_with_lock(struct lock *lock) {
     struct thread *t;
 
     for (
-            e = list_begin(&thread_current() -> donation_list);
-            e != list_end(&thread_current() -> donation_list);
-            e = list_next(e)
+        e = list_begin(&thread_current() -> donation_list);
+    e != list_end(&thread_current() -> donation_list);
+    e = list_next(e)
     ) {
         t = list_entry(e, struct thread, donation_list_elem);
         if (t -> wait_on_lock == lock) {
@@ -765,9 +765,9 @@ void remove_with_lock(struct lock *lock) {
 
 /* 对优先级进行降序 */
 bool cmp_priority (
-        const struct list_elem *a,
-        const struct list_elem *b,
-        void *aux UNUSED
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux UNUSED
 ) {
     struct thread *ta = list_entry(a, struct thread, elem);
     struct thread *tb = list_entry(b, struct thread, elem);
