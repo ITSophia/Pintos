@@ -162,59 +162,75 @@ thread_print_stats (void)
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-tid_t
-thread_create (const char *name, int priority,
-               thread_func *function, void *aux)
-{
-  struct thread *t;
-  struct kernel_thread_frame *kf;
-  struct switch_entry_frame *ef;
-  struct switch_threads_frame *sf;
-  tid_t tid;
-  enum intr_level old_level;
+tid_t thread_create(
+        const char *name,
+        int priority,
+        thread_func *function,
+        void *aux
+) {
+    struct thread *t;
+    struct kernel_thread_frame *kf;
+    struct switch_entry_frame *ef;
+    struct switch_threads_frame *sf;
+    tid_t tid;
+    enum intr_level old_level;
 
-  ASSERT (function != NULL);
+    ASSERT(function != NULL);
 
-  /* Allocate thread. */
-  t = palloc_get_page (PAL_ZERO);
-  if (t == NULL)
-    return TID_ERROR;
+    /* Allocate thread. */
+    t = palloc_get_page(PAL_ZERO);
+    if (t == NULL) {
+        return TID_ERROR;
+    }
 
-  /* Initialize thread. */
-  init_thread (t, name, priority);
-  tid = t->tid = allocate_tid ();
+    /* Initialize thread. */
+    init_thread(t, name, priority);
+    tid = t -> tid = allocate_tid();
 
-  /* Prepare thread for first run by initializing its stack.
-     Do this atomically so intermediate values for the 'stack'
-     member cannot be observed. */
-  old_level = intr_disable ();
+    /* Prepare thread for first run by initializing its stack.
+     *    Do this atomically so intermediate values for the 'stack'
+     *    member cannot be observed. */
+    old_level = intr_disable();
 
-  /* Stack frame for kernel_thread(). */
-  kf = alloc_frame (t, sizeof *kf);
-  kf->eip = NULL;
-  kf->function = function;
-  kf->aux = aux;
+    /* Stack frame for kernel_thread(). */
+    kf = alloc_frame(t, sizeof *kf);
+    kf -> eip = NULL;
+    kf -> function = function;
+    kf -> aux = aux;
 
-  /* Stack frame for switch_entry(). */
-  ef = alloc_frame (t, sizeof *ef);
-  ef->eip = (void (*) (void)) kernel_thread;
+    /* Stack frame for switch_entry(). */
+    ef = alloc_frame(t, sizeof *ef);
+    ef -> eip = (void (*) (void)) kernel_thread;
 
-  /* Stack frame for switch_threads(). */
-  sf = alloc_frame (t, sizeof *sf);
-  sf->eip = switch_entry;
-  sf->ebp = 0;
+    /* Stack frame for switch_threads(). */
+    sf = alloc_frame(t, sizeof *sf);
+    sf -> eip = switch_entry;
+    sf -> ebp = 0;
 
-  intr_set_level (old_level);
+    intr_set_level(old_level);
 
-  /* Add to run queue. */
-  thread_unblock (t);
+    /* Add to run queue. */
+    thread_unblock(t);
 
-  /* 测试是否需要使当前线程让出CPU */
-  old_level = intr_disable();
-  test_yield();
-  intr_set_level(old_level);
+    /*
+     * 测试是否需要使当前创造的线程让出CPU，
+     * 显然这样做是有充分的理由的，
+     * thread_create()函数在执行到上面的thread_unblock()函数的时候，已经是一个新的线程了，
+     * 然而这个新建的线程当前正占有CPU，
+     * 这显然是不完全正确的操作，
+     * 只有在新建的线程优先级在ready_list中最高的时候，它才能占用CPU，
+     * 否则应当立即放弃对CPU的占用，
+     * 因此我们需要调用test_yield()进行检测
+     *
+     * 这一步的操作也是相当关键啊，
+     * 之前一直搞不清楚为什么程序运行时显示的优先级总是与实际的不符合，
+     * 很大一部分的原因就是没用考虑到上述问题
+     */
+    old_level = intr_disable();
+    test_yield();
+    intr_set_level(old_level);
 
-  return tid;
+    return tid;
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -249,6 +265,7 @@ void thread_unblock(struct thread *t) {
     /*
      * 注释掉原有的代码
      * list_push_back(&ready_list, &t -> elem);
+     * 并按照优先级降序将线程插入到ready_list中
      */
     list_insert_ordered(
             &ready_list,
