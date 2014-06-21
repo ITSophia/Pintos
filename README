@@ -6,7 +6,7 @@ https://mthli.github.io
 
 文件说明：
     1. Doc -- 用于存放一些Pintos相关的参考资料
-    2. Release -- 存放了各个Project的完成部分
+    2. Release -- 存放了各个Project的完成部分，源码部分包含详细的注释
     3. Test -- 当前正在进行相关代码实现的文件夹
     4. Trash -- 回收站
     5. README -- README文件
@@ -16,14 +16,53 @@ https://mthli.github.io
       |
       | -- Alarm Clock（已完成，2014年05月31日）
       |      |
-      |      | -- 修改timer.h文件：
+      |      | -- 修改pintos/src/devices/timer.h文件：
       |      |    增加ticks_cmp()函数声明
       |      |
-      |      | -- 修改timer.c文件：
-      |           修改timer_sleep()函数、timer_interrupt()函数，
+      |      | -- 修改pintos/src/devices/timer.c文件：
+      |           修改timer_sleep()函数，
+      |           修改timer_interrupt()函数，
       |           增加ticks_cmp()函数的实现
       |
-      | -- Priority Scheduling（实现中）
+      | -- Priority Scheduling（已完成，2014年06月21日）
+      |      |
+      |      | -- 修改pintos/src/threads/synch.h文件：
+      |      |    增加cmp_sem_priority()函数声明
+      |      |
+      |      | -- 修改pintos/src/threads/synch.c文件：
+      |      |    修改sema_down()函数，
+      |      |    修改sema_up()函数，
+      |      |    修改lock_acquire()函数，
+      |      |    修改lock_try_acquire()函数，
+      |      |    修改lock_release()函数，
+      |      |    修改cond_wait()函数，
+      |      |    修改cond_signal()函数，
+      |      |    增加cmp_sem_priority()函数的实现
+      |      |
+      |      | -- 修改pintos/src/threads/thread.h文件：
+      |      |    修改thread结构体定义，
+      |      |    增加refresh_priority()函数声明，
+      |      |    增加donate_priority()函数声明，
+      |      |    增加remove_with_lock()函数声明，
+      |      |    增加cmp_priority()函数声明，
+      |      |    增加test_yield()函数声明
+      |      |
+      |      | -- 修改pintos/src/threads/thread.c文件：
+      |           修改thread_create()函数，
+      |           修改thread_unblock()函数，
+      |           修改thread_yield()函数，
+      |           修改thread_set_priority()函数，
+      |           修改thread_get_priority()函数，
+      |           修改init_thread()函数，
+      |           增加refresh_priority()函数的实现，
+      |           增加donate_priority()函数的实现，
+      |           增加remove_with_lock()函数的实现，
+      |           增加cmp_priority()函数的实现，
+      |           增加test_yield()函数的实现
+      |
+      | -- Advanced Scheduler（实现中...）
+    
+    Project 2 -- User Programs
       |
       | -- ...
 
