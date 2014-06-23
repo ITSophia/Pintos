@@ -602,10 +602,6 @@ void thread_set_priority(int new_priority) {
     enum intr_level old_level;
     int old_priority;
 
-    if (thread_mlfqs) {
-        return;
-    }
-
     old_level = intr_disable();
     /* 获取当前线程的优先级 */
     old_priority = thread_current() -> priority;
