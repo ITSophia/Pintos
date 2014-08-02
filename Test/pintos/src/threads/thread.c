@@ -193,7 +193,7 @@ tid_t thread_create(
     tid = t -> tid = allocate_tid();
 
     /* 对nice值和recent_cpu进行初始化 */
-    t - > nice = 0;
+    t -> nice = 0;
     t -> recent_cpu = 0;
 
     /* Prepare thread for first run by initializing its stack.
@@ -383,6 +383,9 @@ void thread_set_nice(int nice) {
      * 如果当前线程不再具有最高的优先级了，
      * 把它yield
      */
+    /* Do something */
+    test_yield();
+    intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
@@ -396,14 +399,24 @@ int thread_get_nice(void) {
 
 /* Returns 100 times the system load average. */
 int thread_get_load_avg(void) {
-    /* Not yet implemented. */
-    return 0;
+    enum intr_level old_level = intr_disable();
+    int temp = fp_to_int_round_nearest(
+            fp_mul_int(load_avg, 100)
+    );
+    intr_set_level(old_level);
+
+    return temp;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int thread_get_recent_cpu(void) {
-    /* Not yet implemented. */
-    return 0;
+    enum intr_level old_level = intr_disable();
+    int temp = fp_to_int_round_nearest(
+            fp_mul_int(thread_current() -> recent_cpu, 100)
+    );
+    intr_set_level(old_level);
+
+    return temp;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -662,17 +675,17 @@ void test_yield(void) {
 }
 
 /* 整数格式化为定点数 */
-int int_to_fixed_point(int n) {
+int int_to_fp(int n) {
     return n * F;
 }
 
 /* 定点数转化为整数（舍入到0）
-int fixed_point_to_int_round_zero(int x) {
+int fp_to_int_round_zero(int x) {
     return x / F;
 }
 
 /* 定点数转化为整数（四舍五入到最近的）
-int fixed_point_to_int_round_nearest(int x) {
+int fp_to_int_round_nearest(int x) {
     if (x >= 0) {
         return (x + F / 2) / F;
     } else {
@@ -681,41 +694,41 @@ int fixed_point_to_int_round_nearest(int x) {
 }
 
 /* 两个定点数相加 */
-int fixed_point_add(int x, int y) {
+int fp_add(int x, int y) {
     return x + y;
 }
 
 /* 两个定点数相减 */
-int fixed_point_sub(int x, int y) {
+int fp_sub(int x, int y) {
     return x - y;
 }
 
 /* 整数与定点数相加 */
-int int_add_fixed_point(int n, int x) {
+int fp_add_int(int x, int n) {
     return x + n * F;
 }
 
 /* 整数减定点数 */
-int int_sub_fixed_point(int n, int x) {
+int fp_sub_int(int x, int n) {
     return x - n * F;
 }
 
 /* 两个定点数相乘 */
-int fixed_point_mul(int x, int y) {
+int fp_mul(int x, int y) {
     return ((int64_t) x) * y / F;
 }
 
 /* 两个定点数相除 */
-int fixed_point_div(int x, int y) {
+int fp_div(int x, int y) {
     return ((int64_t) x) * F / y;
 }
 
 /* 定点数与整数相乘 */
-int fixed_point_mul_int(int x, int n) {
+int fp_mul_int(int x, int n) {
     return x * n;
 }
 
 /* 定点数除以整数 */
-int fixed_point_div_int(int x, int n) {
+int fp_div_int(int x, int n) {
     return x / n;
 }

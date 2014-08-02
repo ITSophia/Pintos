@@ -165,17 +165,17 @@ int thread_get_load_avg (void);
 
 /* 以下为自定义部分 */
 
-int int_to_fixed_point(int n);
-int fixed_point_to_int_round_zero(int x);
-int fixed_point_to_int_round_nearest(int x);
-int fixed_point_add(int x, int y);
-int fixed_point_sub(int x, int y);
-int int_add_fixed_point(int n, int x);
-int int_sub_fixed_point(int n, int x);
-int fixed_point_mul(int x, int y);
-int fixed_point_div(int x, int y);
-int fixed_point_mul_int(int x, int n);
-int fixed_point_div_int(int x, int n);
+int int_to_fp(int n);
+int fp_to_int_round_zero(int x);
+int fp_to_int_round_nearest(int x);
+int fp_add(int x, int y);
+int fp_sub(int x, int y);
+int fp_add_int(int x, int n);
+int fp_sub_int(int x, int n);
+int fp_mul(int x, int y);
+int fp_div(int x, int y);
+int fp_mul_int(int x, int n);
+int fp_div_int(int x, int n);
 
 void test_yield(void);
 
