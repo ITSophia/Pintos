@@ -59,6 +59,41 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+/*
+ * 17.14定点数格式化用到的设置，
+ * 在这里我们使用的是“位运算”取数，
+ * 其实我们正常使用乘法也可以；
+ * 不过处于性能的考虑，
+ * 使用位运算的速度仍然要快于乘法
+ *
+ * F用于17.14定点数的格式化，十进制数值为16384
+ * INT_MAX为在17.14定点数格式下可以表示到的最大整数，十进制数值为2147483647
+ * INT_MIN为在17.14定点数格式下可以表示到的最小整数，十进制数值为-2147483648
+ *
+ * #define F (1 << 14)
+ * #define INT_MAX ((1 << 31) -1)
+ * #define INT_MIN (-(1 << 31))
+ */
+#define F (1 << 14)
+
+/* 定义nice值 */
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+#define NICE_MIN -20
+
+/* 定义recent_cpu的默认值 */
+#define RECENT_CPU_DEFAULT 0
+
+/* 定义load_avg的初始值 */
+#define LOAD_AVG_DEFAULT 0
+
+/*
+ * 定义系统全局的load_avg，
+ * 也许没有必要使用static，
+ * 不过我觉得用不用static在这里都一样
+ */
+int load_avg;
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -533,6 +568,8 @@ init_thread (struct thread *t, const char *name, int priority)
   /* 对nice值和recent_cpu进行初始化 */
   t -> nice = NICE_DEFAULT;
   t -> recent_cpu = RECENT_CPU_DEFAULT;
+  /* 对load_avg进行初始化 */
+  load_avg = LOAD_AVG_DEFAULT;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -697,7 +734,6 @@ void test_yield(void) {
      * 注意thread_tick()函数也许起着相同的作用，
      * 有必要的话可以把这几行代码注释掉
      */
-    /*
     if(intr_context()) {
         thread_ticks++; // ？
         if(
@@ -709,7 +745,6 @@ void test_yield(void) {
         }
         return;
     }
-    */
 
     if ((thread_current() -> priority) < t -> priority) {
         thread_yield();
@@ -748,7 +783,6 @@ void calculate_recent_cpu(struct thread *t) {
     int temp_den = 0;
     int temp_con = 0;
     int temp_pro = 0;
-    int temp_sum = 0;
 
     if (t == idle_thread) {
         return;
@@ -794,8 +828,6 @@ void calculate_mlfqs_priority(struct thread *t) {
  * 看上去好像毫无用处？
  */
 void recent_cpu_increment(void) {
-    int temp = 0;
-
     if (thread_current() == idle_thread) {
         return;
     }
