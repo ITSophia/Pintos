@@ -2,7 +2,7 @@
 http://www.stanford.edu/class/cs140/projects/pintos/pintos.html
 
 详细文档可参阅我的个人博客：
-https://mthli.github.io
+http://mthli.github.io/tags/#Pintos
 
 文件说明：
     1. Doc -- 用于存放一些Pintos相关的参考资料
@@ -12,17 +12,24 @@ https://mthli.github.io
     5. README -- README文件
 
 进度：
-    Project 1 -- Threads
+    下列目录树可能没有包含全部修改的文件，参考的时候请注意。
+    不过我还是会尽量完善这颗目录树的。
+
+    Project 1 -- Threads （已完成，2014年08月03日）
       |
       | -- Alarm Clock（已完成，2014年05月31日）
       |      |
       |      | -- 修改pintos/src/devices/timer.h文件：
       |      |    增加ticks_cmp()函数声明
       |      |
+      |      | -- 修改pintos/src/threads/thread.h文件：
+      |      |    修改thread结构体
+      |      |
       |      | -- 修改pintos/src/devices/timer.c文件：
       |           修改timer_sleep()函数，
       |           修改timer_interrupt()函数，
       |           增加ticks_cmp()函数的实现
+      |
       |
       | -- Priority Scheduling（已完成，2014年06月21日）
       |      |
@@ -60,11 +67,61 @@ https://mthli.github.io
       |           增加cmp_priority()函数的实现，
       |           增加test_yield()函数的实现
       |
-      | -- Advanced Scheduler（实现中...）
-    
+      | -- Advanced Scheduler（已完成，2014年08月03日）
+             |
+             | -- 使用了Alarm Clock中全部修改的文件，
+             |    使用了Priority Scheduling中全部修改的文件
+             |
+             | -- 在pintos/src/devices/timer.c文件中：
+             |    修改timer_interrupt()函数
+             |
+             | -- 在pintos/src/threads/synch.c文件中：
+             |    修改sema_down()函数，
+             |    修改sema_up()函数，
+             |    修改lock_acquire()函数，
+             |    修改lock_try_acquire()函数，
+             |    修改lock_release()函数
+             |
+             | -- 在pintos/src/threads/thread.h文件中：
+             |    修改thread结构体
+             |    增加calculate_load_avg()函数声明，
+             |    增加calculate_recent_cpu()函数声明，
+             |    增加calculate_mlfqs_priority()函数声明，
+             |    增加recent_cpu_increment()函数声明，
+             |    增加update_recent_cpu_and_load_avg()函数声明，
+             |    增加int_to_fp()函数声明，
+             |    增加fp_to_int_round_zero()函数声明，
+             |    增加fp_to_int_round_nearest()函数声明，
+             |    增加fp_add()函数声明，
+             |    增加fp_sub()函数声明，
+             |    增加fp_add_int()函数声明，
+             |    增加fp_sub_int()函数声明，
+             |    增加fp_mul()函数声明，
+             |    增加fp_div()函数声明，
+             |    增加fp_mul_int()函数声明，
+             |    增加fp_div_int()函数声明
+             |
+             | -- 在pintos/src/thread/thread.h文件中：
+                  增加calculate_load_avg()函数的实现，
+                  增加calculate_recent_cpu()函数的实现，
+                  增加calculate_mlfqs_priority()函数的实现，
+                  增加recent_cpu_increment()函数的实现，
+                  增加update_recent_cpu_and_load_avg()函数的实现，
+                  增加int_to_fp()函数的实现，
+                  增加fp_to_int_round_zero()函数的实现，
+                  增加fp_to_int_round_nearest()函数的实现，
+                  增加fp_add()函数的实现，
+                  增加fp_sub()函数的实现，
+                  增加fp_add_int()函数的实现，
+                  增加fp_sub_int()函数的实现，
+                  增加fp_mul()函数的实现，
+                  增加fp_div()函数的实现，
+                  增加fp_mul_int()函数的实现，
+                  增加fp_div_int()函数的实现
+
     Project 2 -- User Programs
       |
-      | -- ...
+      | -- Process Termination Messages（实现中...）
 
 参考：
     1. https://github.com/rtwilson/Pintos-Project-1
