@@ -39,6 +39,14 @@ typedef int tid_t;
 #define INT_MAX ((1 << 31) -1)
 #define INT_MIN (-(1 << 31))
 
+/* 定义nice值 */
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+#define NICE_MIN -20
+
+/* 定义recent_cpu的默认值 */
+#define RECENT_CPU_DEFAULT 0
+
 /*
  * 定义系统全局的load_avg，
  * 也许没有必要使用static，
@@ -165,6 +173,14 @@ int thread_get_load_avg (void);
 
 /* 以下为自定义部分 */
 
+void test_yield(void);
+
+void calculate_load_avg(void);
+void calculate_recent_cpu(struct thread *t);
+void calculate_mlfqs_priority(struct thread *t);
+void recent_cpu_increment(void);
+void update_recent_cpu_and_load_avg(void);
+
 int int_to_fp(int n);
 int fp_to_int_round_zero(int x);
 int fp_to_int_round_nearest(int x);
@@ -176,7 +192,5 @@ int fp_mul(int x, int y);
 int fp_div(int x, int y);
 int fp_mul_int(int x, int n);
 int fp_div_int(int x, int n);
-
-void test_yield(void);
 
 #endif /* threads/thread.h */

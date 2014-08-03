@@ -1,4 +1,4 @@
-#include "threads/thread.h"
+﻿#include "threads/thread.h"
 #include <debug.h>
 #include <stddef.h>
 #include <random.h>
@@ -193,8 +193,8 @@ tid_t thread_create(
     tid = t -> tid = allocate_tid();
 
     /* 对nice值和recent_cpu进行初始化 */
-    t -> nice = 0;
-    t -> recent_cpu = 0;
+    t -> nice = NICE_DEFAULT;
+    t -> recent_cpu = RECENT_CPU_DEFAULT;
 
     /* Prepare thread for first run by initializing its stack.
      *    Do this atomically so intermediate values for the 'stack'
@@ -671,6 +671,118 @@ void test_yield(void) {
 
     if ((thread_current() -> priority) < t -> priority) {
         thread_yield();
+    }
+}
+
+/*
+ * 窃以为把作为定点数的load_avg和recent_cpu转化为对应的整数不会有什么影响，
+ * 所以是否需要转化属于模棱两可的状态，
+ * 有必要的话再更换一下就可以了
+ */
+
+/*
+ * 用于计算load_avg，
+ * 看上去好像毫无用处？
+ */
+void calculate_load_avg(void) {
+    int length = 0;
+    int temp_59 = 0;
+    int temp_1 = 0;
+    int temp = 0;
+
+    length = list_size(&ready_list);
+    if (thread_current() != idle_thread) {
+        length++;
+    }
+
+    /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
+    temp_59 = fp_div(int_to_fp(59) ,int_to_fp(60));
+    temp_1 = fp_div(int_to_fp(1), int_to_fp(60));
+    temp = fp_mul_int(temp_59, load_avg) + fp_mul_int(temp_1, length);
+    /* 有必要把load_avg转换成整数吗？ */
+    load_avg = fp_to_int_round_nearest(temp);
+}
+
+/* 用于计算线程的recent_cpu */
+void calculate_recent_cpu(struct thread *t) {
+    int temp_mem = 0;
+    int temp_den = 0;
+    int temp_con = 0;
+    int temp_pro = 0;
+    int temp_sum = 0;
+
+    if (t == idle_thread) {
+        return;
+    }
+
+    /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
+    temp_mem = int_to_fp(2 * load_avg);
+    temp_den = int_to_fp(2 * load_avg + 1);
+    temp_con = fp_div(temp_mem, temp_den);
+    temp_pro = fp_mul_int(temp_con, t -> recent_cpu);
+    temp_sum = fp_add_int(temp_pro, t -> nice);
+    /* 有必要把recent_cpu转换成整数吗？ */
+    t -> recent_cpu = fp_to_int_round_nearest(temp_sum);
+}
+
+/* 用于计算多级反馈队列调度算法情况下，每个线程的优先级 */
+void calculate_mlfqs_priority(struct thread *t) {
+    int temp_con = 0;
+    int temp_pro = 0;
+    int temp_dif = 0;
+
+    if (t == idle_thread) {
+        return;
+    }
+
+    /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
+    temp_con = fp_div(int_to_fp(t -> recent_cpu), int_to_fp(4));
+    temp_pro = fp_mul(int_to_fp(t -> nice), int_to_fp(2));
+    temp_dif = fp_sub(int_to_fp(PRI_MAX), temp_con);
+    temp_dif = fp_sub(temp_dif, temp_pro);
+    /* priority必然需要转换为对应的整数 */
+    t -> priority = fp_to_int_round_zero(temp_dif);
+
+    /* 保证计算出的线程优先级在限制范围内 */
+    if (t -> priority < PRI_MIN) {
+        t -> priority = PRI_MIN;
+    }
+    if (t -> priority > PRI_MAX) {
+        t -> priority = PRI_MAX;
+    }
+}
+
+/*
+ * 用于线程recent_cpu的自增运算，
+ * 看上去好像毫无用处？
+ */
+void recent_cpu_increment(void) {
+    int temp = 0;
+
+    if (t == idle_thread) {
+        return;
+    }
+
+    temp = fp_add(
+            int_to_fp(thread_current() -> recent_cpu),
+            int_to_fp(1)
+    );
+    /* 有必要把recent_cpu转换成整数吗？ */
+    thread_current() -> recent_cpu = fp_to_int_round_nearest(temp);
+}
+
+/* 更新recent_cpu和load_avg */
+void update_recent_cpu_and_load_avg(void) {
+    struct list_elem *e;
+
+    for (
+            e = list_begin(&all_list);
+            e != list_end(&all_list);
+            e = list_next(e)
+    ) {
+        struct thread *t = list_entry(e, struct thread, allelem);
+        calculate_recent_cpu(t);
+        calculate_mlfqs_priority(t);
     }
 }
 
