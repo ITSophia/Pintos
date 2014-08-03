@@ -92,6 +92,9 @@ struct thread {
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* int64_t ticks 用于设置timer_sleep()的唤醒时间 */
+    int64_t ticks;
+
     /* MLFQS用到的自定义部分 */
     int nice;
     int recent_cpu;

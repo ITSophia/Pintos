@@ -751,16 +751,7 @@ void test_yield(void) {
     }
 }
 
-/*
- * 窃以为把作为定点数的load_avg和recent_cpu转化为对应的整数不会有什么影响，
- * 所以是否需要转化属于模棱两可的状态，
- * 有必要的话再更换一下就可以了
- */
-
-/*
- * 用于计算load_avg，
- * 看上去好像毫无用处？
- */
+/* 用于计算load_avg */
 void calculate_load_avg(void) {
     int length = 0;
     int temp_59 = 0;
@@ -774,7 +765,7 @@ void calculate_load_avg(void) {
     /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
     temp_59 = fp_div(int_to_fp(59) ,int_to_fp(60));
     temp_1 = fp_div(int_to_fp(1), int_to_fp(60));
-    load_avg = fp_mul_int(temp_59, load_avg) + fp_mul_int(temp_1, length);
+    load_avg = fp_mul(temp_59, load_avg) + fp_mul_int(temp_1, length);
 }
 
 /* 用于计算线程的recent_cpu */
@@ -789,10 +780,10 @@ void calculate_recent_cpu(struct thread *t) {
     }
 
     /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
-    temp_mem = int_to_fp(2 * load_avg);
-    temp_den = int_to_fp(2 * load_avg + 1);
+    temp_mem = fp_mul_int(load_avg, 2);
+    temp_den = fp_add_int(temp_mem, 1);
     temp_con = fp_div(temp_mem, temp_den);
-    temp_pro = fp_mul_int(temp_con, t -> recent_cpu);
+    temp_pro = fp_mul(temp_con, t -> recent_cpu);
     t -> recent_cpu = fp_add_int(temp_pro, t -> nice);
 }
 
@@ -807,7 +798,7 @@ void calculate_mlfqs_priority(struct thread *t) {
     }
 
     /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
-    temp_con = fp_div(int_to_fp(t -> recent_cpu), int_to_fp(4));
+    temp_con = fp_div(t -> recent_cpu, int_to_fp(4));
     temp_pro = fp_mul(int_to_fp(t -> nice), int_to_fp(2));
     temp_dif = fp_sub(int_to_fp(PRI_MAX), temp_con);
     temp_dif = fp_sub(temp_dif, temp_pro);
@@ -823,17 +814,14 @@ void calculate_mlfqs_priority(struct thread *t) {
     }
 }
 
-/*
- * 用于线程recent_cpu的自增运算，
- * 看上去好像毫无用处？
- */
+/* 用于线程recent_cpu的自增运算 */
 void recent_cpu_increment(void) {
     if (thread_current() == idle_thread) {
         return;
     }
 
     thread_current() -> recent_cpu = fp_add(
-            int_to_fp(thread_current() -> recent_cpu),
+            thread_current() -> recent_cpu,
             int_to_fp(1)
     );
 }
