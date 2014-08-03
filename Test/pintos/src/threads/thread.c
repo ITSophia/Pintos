@@ -136,12 +136,12 @@ void thread_tick(void) {
     }
 
     /*
+     * 把原有的代码注释掉
      * Enforce preemption.
-     * 有必要的话可以把这几行代码注释掉
+     * if (++thread_ticks >= TIME_SLICE) {
+     *     intr_yield_on_return ();
+     * }
      */
-    if (++thread_ticks >= TIME_SLICE) {
-        intr_yield_on_return ();
-    }
 }
 
 /* Prints thread statistics. */
@@ -191,10 +191,6 @@ tid_t thread_create(
     /* Initialize thread. */
     init_thread(t, name, priority);
     tid = t -> tid = allocate_tid();
-
-    /* 对nice值和recent_cpu进行初始化 */
-    t -> nice = NICE_DEFAULT;
-    t -> recent_cpu = RECENT_CPU_DEFAULT;
 
     /* Prepare thread for first run by initializing its stack.
      *    Do this atomically so intermediate values for the 'stack'
@@ -256,18 +252,30 @@ thread_block (void)
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
-void
-thread_unblock (struct thread *t)
-{
-  enum intr_level old_level;
+void thread_unblock(struct thread *t) {
+    enum intr_level old_level;
 
-  ASSERT (is_thread (t));
+    ASSERT(is_thread (t));
 
-  old_level = intr_disable ();
-  ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
-  t->status = THREAD_READY;
-  intr_set_level (old_level);
+    old_level = intr_disable ();
+    ASSERT(t -> status == THREAD_BLOCKED);
+
+    /*
+     * 注释掉原有的代码
+     * list_push_back(&ready_list, &t -> elem);
+     *
+     * 在这里采用按照线程优先级从高到低的顺序插入队列，
+     * 因为我们使用的是单队列模拟多级反馈队列
+     */
+    list_insert_ordered(
+            &ready_list,
+            &t -> elem,
+            (list_less_func *) &cmp_priority,
+            NULL
+    );
+
+    t -> status = THREAD_READY;
+    intr_set_level(old_level);
 }
 
 /* Returns the name of the running thread. */
@@ -325,21 +333,35 @@ thread_exit (void)
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and
-   may be scheduled again immediately at the scheduler's whim. */
-void
-thread_yield (void)
-{
-  struct thread *cur = thread_current ();
-  enum intr_level old_level;
+ *   may be scheduled again immediately at the scheduler's whim. */
+void thread_yield(void) {
+    struct thread *cur = thread_current();
+    enum intr_level old_level;
 
-  ASSERT (!intr_context ());
+    ASSERT(!intr_context());
 
-  old_level = intr_disable ();
-  if (cur != idle_thread)
-    list_push_back (&ready_list, &cur->elem);
-  cur->status = THREAD_READY;
-  schedule ();
-  intr_set_level (old_level);
+    old_level = intr_disable();
+
+    /*
+     * 注释掉原有的代码
+     * if (cur != idle_thread)
+     *     list_push_back (&ready_list, &cur->elem);
+     *
+     * 在这里采用按照线程优先级从高到低的顺序插入队列，
+     * 因为我们使用的是单队列模拟多级反馈队列
+     */
+    if (cur != idle_thread) {
+        list_insert_ordered(
+                &ready_list,
+                &cur -> elem,
+                (list_less_func *) &cmp_priority,
+                NULL
+        );
+    }
+
+    cur -> status = THREAD_READY;
+    schedule();
+    intr_set_level(old_level);
 }
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
@@ -385,7 +407,7 @@ void thread_set_nice(int nice) {
      * 如果当前线程不再具有最高的优先级了，
      * 把它yield
      */
-    /* Do something */
+    calculate_mlfqs_priority(thread_current());
     test_yield();
     intr_set_level(old_level);
 }
@@ -507,6 +529,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
+
+  /* 对nice值和recent_cpu进行初始化 */
+  t -> nice = NICE_DEFAULT;
+  t -> recent_cpu = RECENT_CPU_DEFAULT;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -625,6 +651,20 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 /* 以下为自定义部分 */
 
+/* 对优先级进行降序 */
+bool cmp_priority(
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux UNUSED
+) {
+    struct thread *ta = list_entry(a, struct thread, elem);
+    struct thread *tb = list_entry(b, struct thread, elem);
+    if ((ta -> priority) > (tb -> priority)) {
+        return true;
+    }
+    return false;
+}
+
 /* 判断设置优先级过后，当前线程是否应该放弃对CPU的占用 */
 void test_yield(void) {
     struct thread *t;
@@ -690,7 +730,6 @@ void calculate_load_avg(void) {
     int length = 0;
     int temp_59 = 0;
     int temp_1 = 0;
-    int temp = 0;
 
     length = list_size(&ready_list);
     if (thread_current() != idle_thread) {
@@ -700,9 +739,7 @@ void calculate_load_avg(void) {
     /* 注意全部先转换成定点数计算出相应值，然后在换算成对应的整数 */
     temp_59 = fp_div(int_to_fp(59) ,int_to_fp(60));
     temp_1 = fp_div(int_to_fp(1), int_to_fp(60));
-    temp = fp_mul_int(temp_59, load_avg) + fp_mul_int(temp_1, length);
-    /* 有必要把load_avg转换成整数吗？ */
-    load_avg = fp_to_int_round_nearest(temp);
+    load_avg = fp_mul_int(temp_59, load_avg) + fp_mul_int(temp_1, length);
 }
 
 /* 用于计算线程的recent_cpu */
@@ -722,9 +759,7 @@ void calculate_recent_cpu(struct thread *t) {
     temp_den = int_to_fp(2 * load_avg + 1);
     temp_con = fp_div(temp_mem, temp_den);
     temp_pro = fp_mul_int(temp_con, t -> recent_cpu);
-    temp_sum = fp_add_int(temp_pro, t -> nice);
-    /* 有必要把recent_cpu转换成整数吗？ */
-    t -> recent_cpu = fp_to_int_round_nearest(temp_sum);
+    t -> recent_cpu = fp_add_int(temp_pro, t -> nice);
 }
 
 /* 用于计算多级反馈队列调度算法情况下，每个线程的优先级 */
@@ -765,12 +800,10 @@ void recent_cpu_increment(void) {
         return;
     }
 
-    temp = fp_add(
+    thread_current() -> recent_cpu = fp_add(
             int_to_fp(thread_current() -> recent_cpu),
             int_to_fp(1)
     );
-    /* 有必要把recent_cpu转换成整数吗？ */
-    thread_current() -> recent_cpu = fp_to_int_round_nearest(temp);
 }
 
 /* 更新recent_cpu和load_avg */

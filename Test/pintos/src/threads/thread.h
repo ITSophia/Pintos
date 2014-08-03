@@ -173,6 +173,12 @@ int thread_get_load_avg (void);
 
 /* 以下为自定义部分 */
 
+bool cmp_priority(
+    const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux
+);
+
 void test_yield(void);
 
 void calculate_load_avg(void);
