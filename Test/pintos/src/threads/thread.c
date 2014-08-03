@@ -360,7 +360,7 @@ thread_foreach (thread_action_func *func, void *aux)
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
-void thread_set_priority(int new_priority) {
+void thread_set_priority(int new_priority UNUSED) {
     /*
      * 注释掉原有的代码
      * thread_current() -> priority = new_priority;
@@ -761,7 +761,7 @@ void calculate_mlfqs_priority(struct thread *t) {
 void recent_cpu_increment(void) {
     int temp = 0;
 
-    if (t == idle_thread) {
+    if (thread_current() == idle_thread) {
         return;
     }
 
@@ -793,12 +793,12 @@ int int_to_fp(int n) {
     return n * F;
 }
 
-/* 定点数转化为整数（舍入到0）
+/* 定点数转化为整数（舍入到0） */
 int fp_to_int_round_zero(int x) {
     return x / F;
 }
 
-/* 定点数转化为整数（四舍五入到最近的）
+/* 定点数转化为整数（四舍五入到最近的） */
 int fp_to_int_round_nearest(int x) {
     if (x >= 0) {
         return (x + F / 2) / F;
