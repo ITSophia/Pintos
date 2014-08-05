@@ -80,7 +80,8 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
-struct thread {
+struct thread
+  {
     /* Owned by thread.c. */
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
@@ -92,21 +93,14 @@ struct thread {
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    /* int64_t ticks 用于设置timer_sleep()的唤醒时间 */
-    int64_t ticks;
-
-    /* MLFQS用到的自定义部分 */
-    int nice;
-    int recent_cpu;
-
-    #ifdef USERPROG
+#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-    #endif
+#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-};
+  };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -143,33 +137,5 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-/* 以下为自定义部分 */
-
-bool cmp_priority(
-    const struct list_elem *a,
-    const struct list_elem *b,
-    void *aux
-);
-
-void test_yield(void);
-
-void calculate_load_avg(void);
-void calculate_recent_cpu(struct thread *t);
-void calculate_mlfqs_priority(struct thread *t);
-void recent_cpu_increment(void);
-void update_recent_cpu_and_load_avg(void);
-
-int int_to_fp(int n);
-int fp_to_int_round_zero(int x);
-int fp_to_int_round_nearest(int x);
-int fp_add(int x, int y);
-int fp_sub(int x, int y);
-int fp_add_int(int x, int n);
-int fp_sub_int(int x, int n);
-int fp_mul(int x, int y);
-int fp_div(int x, int y);
-int fp_mul_int(int x, int n);
-int fp_div_int(int x, int n);
 
 #endif /* threads/thread.h */
